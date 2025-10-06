@@ -420,7 +420,7 @@ Action: {action.title()}
 Please log into the system to view more details.
 
 Best regards,
-BCMM Control Room
+TTAH Support Team
 """
     
     return send_email(recipient_email, subject, body)
@@ -543,10 +543,10 @@ Ticket Details:
 Description:
 {ticket_data.get('description', 'N/A')}
 
-Please log into the BCMM Control Room system to view full details and take any necessary action.
+Please log into TTAH to view full details and take any necessary action.
 
 Best regards,
-BCMM Control Room Team
+TTAH Support Team
 """
     
     return send_email(recipient_email, subject, body)
@@ -556,7 +556,7 @@ BCMM Control Room Team
 def send_password_reset_email(email, name, reset_token):
     """Send password reset email"""
     try:
-        subject = "Password Reset Request - BCMM Control Room"
+        subject = "Password Reset Request - TTAH"
         
         # Create reset URL (adjust domain as needed)
         reset_url = url_for('reset_password', token=reset_token, _external=True)
@@ -564,7 +564,7 @@ def send_password_reset_email(email, name, reset_token):
         # Create text body
         body = f"""Dear {name},
 
-You have requested to reset your password for the BCMM Control Room system.
+You have requested to reset your password for your TTAH account.
 
 Please click the following link to reset your password:
 {reset_url}
@@ -574,7 +574,7 @@ This link will expire in 1 hour for security reasons.
 If you did not request this password reset, please ignore this email.
 
 Best regards,
-BCMM Control Room Team
+TTAH Support Team
 """
 
         # Create HTML body
@@ -608,7 +608,7 @@ BCMM Control Room Team
         <div class="content">
             <p>Dear {name},</p>
             
-            <p>You have requested to reset your password for the BCMM Control Room system.</p>
+            <p>You have requested to reset your password for your TTAH account.</p>
             
             <p>Please click the button below to reset your password:</p>
             
@@ -624,7 +624,7 @@ BCMM Control Room Team
             <p>If you did not request this password reset, please ignore this email.</p>
         </div>
         <div class="footer">
-            <p>Best regards,<br>BCMM Control Room Team</p>
+            <p>Best regards,<br>TTAH Support Team</p>
         </div>
     </div>
 </body>
