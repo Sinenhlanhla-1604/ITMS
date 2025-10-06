@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>User Dashboard</title>
+  <title>TTAH - User Dashboard</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/styles/user-style.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
@@ -215,14 +215,17 @@
         right: -80px;
       }
     }
-  </style>
+  </style>  
 </head>
 <body> 
   <!-- Top Navigation Bar -->
   <nav class="top-nav">
     <div class="system-name">
-      <img src="{{ url_for('static', filename='img/bcm_logo.png') }}" alt="BCM Logo" class="logo">
+      <img src="{{ url_for('static', filename='img/ttah_logo.png') }}" alt="TTAH Logo" class="logo">
       <span>Ticket Tracking and Analysis Hub</span>
+      {% if org_name %}
+      <span style="font-size: 0.8rem; opacity: 0.8; margin-left: 0.5rem;">| {{ org_name }}</span>
+      {% endif %}
     </div>
     <div class="user-profile">
       <span>{{ name }}</span>

@@ -3,15 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Login</title>
+  <title>TTAH - Login</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='styles/login.css') }}">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
   <style>
     .logo {
-      width: 200px;
-      height: auto;
-      /* vertical-align: middle; */
-      margin-left: 98px;
+      width: 80px;
+      height: 80px;
+      margin: 0 12px 0 0;
     }
     .system-header {
       display: flex;
@@ -129,7 +128,8 @@
 </head>
 <body>
   <h1 class="system-header">
-    <span class="system-name">Ticket Tracking and Analysis Hub</span>
+    <span class="system-name"><img src="{{ url_for('static', filename='img/ttah_logo.png') }}" alt="TTAH Logo" class="logo"> Ticket Tracking and Analysis Hub</span>
+    
   </h1>
 
   <!-- Flash Messages Container -->
@@ -147,7 +147,7 @@
   </div>
 
   <form action="{{ url_for('login') }}" method="POST">
-    <img src="{{ url_for('static', filename='img/bcm_logo.png') }}" alt="BCM Logo" class="logo">
+    
 
     <h2><i class="fas fa-user-circle"></i> Login</h2>
     

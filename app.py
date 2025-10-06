@@ -3,6 +3,7 @@ import psycopg2
 from psycopg2 import sql
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 from datetime import datetime, timedelta
+from functools import wraps
 import bcrypt
 import traceback
 import csv
@@ -90,24 +91,144 @@ def initialize_database():
             return
         cur = conn.cursor()
 
-        # Users table with proper constraints
+        print("Creating organizations table...")
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS organizations (
+                org_id SERIAL PRIMARY KEY,
+                org_name TEXT NOT NULL,
+                org_slug TEXT UNIQUE NOT NULL,
+                org_email TEXT,
+                org_phone TEXT,
+                
+                -- Subscription info
+                subscription_tier TEXT DEFAULT 'free' CHECK (subscription_tier IN ('free', 'starter', 'professional', 'enterprise')),
+                subscription_status TEXT DEFAULT 'active' CHECK (subscription_status IN ('active', 'trial', 'expired', 'cancelled')),
+                max_users INT DEFAULT 10,
+                max_tickets_per_month INT DEFAULT 100,
+                
+                -- Billing info
+                stripe_customer_id TEXT,
+                stripe_subscription_id TEXT,
+                payfast_subscription_id TEXT,
+                
+                -- Branding (white-label)
+                logo_url TEXT,
+                primary_color TEXT DEFAULT '#4e73df',
+                secondary_color TEXT DEFAULT '#858796',
+                
+                -- Status
+                is_active BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT NOW(),
+                updated_at TIMESTAMP DEFAULT NOW(),
+                trial_ends_at TIMESTAMP,
+                
+                -- Contact
+                owner_user_id INT,
+                
+                -- Metadata
+                settings JSONB DEFAULT '{}'::jsonb
+            )
+        """)
+        print("✓ Organizations table created/verified")
+
+        print("Creating org_departments table...")
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS org_departments (
+                dept_id SERIAL PRIMARY KEY,
+                org_id INT NOT NULL REFERENCES organizations(org_id) ON DELETE CASCADE,
+                dept_name TEXT NOT NULL,
+                dept_slug TEXT NOT NULL,
+                description TEXT,
+                is_active BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT NOW(),
+                UNIQUE(org_id, dept_slug)
+            )
+        """)
+        print("✓ Org departments table created/verified")
+
+  
+        print("Checking for default organization...")
+        cur.execute("SELECT org_id FROM organizations WHERE org_slug = 'default-org'")
+        default_org = cur.fetchone()
+        
+        if not default_org:
+            cur.execute("""
+                INSERT INTO organizations (
+                    org_name, 
+                    org_slug, 
+                    org_email,
+                    subscription_tier,
+                    subscription_status,
+                    max_users,
+                    is_active
+                ) VALUES (
+                    'Default Organization',
+                    'default-org',
+                    'admin@ttah.local',
+                    'enterprise',
+                    'active',
+                    999999,
+                    TRUE
+                )
+                RETURNING org_id
+            """)
+            default_org_id = cur.fetchone()[0]
+            print(f"✓ Default organization created (ID: {default_org_id})")
+            
+            # Create default departments
+            default_departments = [
+                ('IT Support', 'it-support', 'IT and technical support'),
+                ('Customer Service', 'customer-service', 'Customer service department')
+            ]
+            
+            for dept_name, dept_slug, description in default_departments:
+                cur.execute("""
+                    INSERT INTO org_departments (org_id, dept_name, dept_slug, description)
+                    VALUES (%s, %s, %s, %s)
+                    ON CONFLICT (org_id, dept_slug) DO NOTHING
+                """, (default_org_id, dept_name, dept_slug, description))
+            
+            print(f"✓ Created {len(default_departments)} default departments")
+        else:
+            default_org_id = default_org[0]
+            print(f"✓ Default organization exists (ID: {default_org_id})")
+
+        print("Creating users table...")
         cur.execute("""
             CREATE TABLE IF NOT EXISTS users (
                 user_id SERIAL PRIMARY KEY,
+                org_id INT REFERENCES organizations(org_id) ON DELETE CASCADE,
                 name TEXT NOT NULL,
                 surname TEXT NOT NULL,
-                email TEXT UNIQUE NOT NULL,
+                email TEXT NOT NULL,
                 password_hash TEXT NOT NULL,
                 region TEXT NOT NULL,
                 role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'assignee', 'admin')),
-                created_at TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL DEFAULT NOW()
+                created_at TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL DEFAULT NOW(),
+                UNIQUE(org_id, email)
             )
         """)
+        
+        # Add org_id if it doesn't exist (for existing databases)
+        cur.execute("""
+            DO $$ 
+            BEGIN
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name = 'users' AND column_name = 'org_id'
+                ) THEN
+                    ALTER TABLE users ADD COLUMN org_id INT REFERENCES organizations(org_id) ON DELETE CASCADE;
+                    UPDATE users SET org_id = (SELECT org_id FROM organizations WHERE org_slug = 'default-org') WHERE org_id IS NULL;
+                END IF;
+            END $$;
+        """)
+        print("✓ Users table created/verified")
 
-        # Tickets table with proper constraints and data types
+        print("Creating tickets table...")
         cur.execute("""
             CREATE TABLE IF NOT EXISTS tickets (
                 ticket_id SERIAL PRIMARY KEY,
+                org_id INT REFERENCES organizations(org_id) ON DELETE CASCADE,
                 title TEXT NOT NULL,
                 description TEXT NOT NULL,
                 attachment_path TEXT,    
@@ -127,14 +248,30 @@ def initialize_database():
                 FOREIGN KEY (assigned_to) REFERENCES users (user_id)
             )
         """)
+        
+        # Add org_id if it doesn't exist (for existing databases)
+        cur.execute("""
+            DO $$ 
+            BEGIN
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name = 'tickets' AND column_name = 'org_id'
+                ) THEN
+                    ALTER TABLE tickets ADD COLUMN org_id INT REFERENCES organizations(org_id) ON DELETE CASCADE;
+                    UPDATE tickets SET org_id = (SELECT org_id FROM organizations WHERE org_slug = 'default-org') WHERE org_id IS NULL;
+                END IF;
+            END $$;
+        """)
+        print("✓ Tickets table created/verified")
 
-        # Announcements table
+        print("Creating announcements table...")
         cur.execute("""
             CREATE TABLE IF NOT EXISTS announcements (
                 announcement_id SERIAL PRIMARY KEY,
+                org_id INT REFERENCES organizations(org_id) ON DELETE CASCADE,
                 title TEXT NOT NULL,
                 content TEXT NOT NULL,
-                target_audience TEXT NOT NULL DEFAULT 'all' CHECK (target_audience IN ('all', 'user', 'assignee', 'admin')),
+                target_audience TEXT NOT NULL DEFAULT 'all' CHECK (target_audience IN ('all', 'user', 'assignee', 'admin', 'users', 'assignees', 'admins')),
                 suppress_tickets BOOLEAN NOT NULL DEFAULT TRUE,
                 is_active BOOLEAN NOT NULL DEFAULT TRUE,
                 created_by INT NOT NULL,
@@ -143,8 +280,24 @@ def initialize_database():
                 FOREIGN KEY (created_by) REFERENCES users (user_id)
             )
         """)
+        
+        # Add org_id if it doesn't exist
+        cur.execute("""
+            DO $$ 
+            BEGIN
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name = 'announcements' AND column_name = 'org_id'
+                ) THEN
+                    ALTER TABLE announcements ADD COLUMN org_id INT REFERENCES organizations(org_id) ON DELETE CASCADE;
+                    UPDATE announcements SET org_id = (SELECT org_id FROM organizations WHERE org_slug = 'default-org') WHERE org_id IS NULL;
+                END IF;
+            END $$;
+        """)
+        print("✓ Announcements table created/verified")
 
-        # Announcement reads table
+
+        print("Creating announcement_reads table...")
         cur.execute("""
             CREATE TABLE IF NOT EXISTS announcement_reads (
                 user_id INT NOT NULL,
@@ -156,8 +309,10 @@ def initialize_database():
                 FOREIGN KEY (announcement_id) REFERENCES announcements (announcement_id)
             )
         """)
+        print("✓ Announcement reads table created/verified")
 
-        # System configuration table
+     
+        print("Creating system_config table...")
         cur.execute("""
             CREATE TABLE IF NOT EXISTS system_config (
                 config_id SERIAL PRIMARY KEY,
@@ -179,8 +334,10 @@ def initialize_database():
                 ('session_timeout', '120', 'Session timeout in minutes')
             ON CONFLICT (config_key) DO NOTHING
         """)
+        print("✓ System config table created/verified")
 
-        # Ticket history table
+
+        print("Creating ticket_history table...")
         cur.execute("""
             CREATE TABLE IF NOT EXISTS ticket_history (
                 ticket_history_id SERIAL PRIMARY KEY,
@@ -196,7 +353,9 @@ def initialize_database():
                 FOREIGN KEY (performed_by) REFERENCES users (user_id)
             )
         """)
+        print("✓ Ticket history table created/verified")
 
+        print("Creating password_reset_tokens table...")
         cur.execute("""
             CREATE TABLE IF NOT EXISTS password_reset_tokens (
                 token_id SERIAL PRIMARY KEY,
@@ -208,46 +367,57 @@ def initialize_database():
                 FOREIGN KEY (user_id) REFERENCES users (user_id) ON DELETE CASCADE
             )
         """)
+        print("✓ Password reset tokens table created/verified")
 
-        # Create indexes for better performance
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_created_by ON tickets (created_by)")
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_assigned_to ON tickets (assigned_to)")
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_ticket_history_ticket_id ON ticket_history (ticket_id)")
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_tickets_updated_at ON tickets(updated_at)")
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_ticket_history_updated_at ON ticket_history(updated_at)")
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_announcements_is_active ON announcements (is_active)")
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_announcements_target_audience ON announcements (target_audience)")
+
+        print("Creating indexes...")
+        indexes = [
+            # User indexes
+            "CREATE INDEX IF NOT EXISTS idx_users_org_id ON users(org_id)",
+            "CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)",
+            "CREATE INDEX IF NOT EXISTS idx_users_role ON users(role)",
+            
+            # Ticket indexes
+            "CREATE INDEX IF NOT EXISTS idx_tickets_org_id ON tickets(org_id)",
+            "CREATE INDEX IF NOT EXISTS idx_tickets_created_by ON tickets (created_by)",
+            "CREATE INDEX IF NOT EXISTS idx_tickets_assigned_to ON tickets (assigned_to)",
+            "CREATE INDEX IF NOT EXISTS idx_tickets_status ON tickets(status)",
+            "CREATE INDEX IF NOT EXISTS idx_tickets_updated_at ON tickets(updated_at)",
+            
+            # Ticket history indexes
+            "CREATE INDEX IF NOT EXISTS idx_ticket_history_ticket_id ON ticket_history (ticket_id)",
+            "CREATE INDEX IF NOT EXISTS idx_ticket_history_updated_at ON ticket_history(updated_at)",
+            
+            # Announcement indexes
+            "CREATE INDEX IF NOT EXISTS idx_announcements_org_id ON announcements(org_id)",
+            "CREATE INDEX IF NOT EXISTS idx_announcements_is_active ON announcements (is_active)",
+            "CREATE INDEX IF NOT EXISTS idx_announcements_target_audience ON announcements (target_audience)",
+            
+            # Announcement reads indexes
+            "CREATE INDEX IF NOT EXISTS idx_announcement_reads_user_id ON announcement_reads (user_id)",
+            "CREATE INDEX IF NOT EXISTS idx_announcement_reads_announcement_id ON announcement_reads (announcement_id)",
+            "CREATE INDEX IF NOT EXISTS idx_announcement_reads_updated_at ON announcement_reads(updated_at)",
+            
+            # Password reset indexes
+            "CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_token ON password_reset_tokens (token)",
+            "CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_user_id ON password_reset_tokens (user_id)",
+            "CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_expires_at ON password_reset_tokens (expires_at)",
+            
+            # Organization indexes
+            "CREATE INDEX IF NOT EXISTS idx_organizations_slug ON organizations(org_slug)",
+            "CREATE INDEX IF NOT EXISTS idx_organizations_stripe_customer ON organizations(stripe_customer_id)",
+            "CREATE INDEX IF NOT EXISTS idx_org_departments_org_id ON org_departments(org_id)",
+        ]
         
-        # Indexes for announcement_reads table
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_announcement_reads_user_id ON announcement_reads (user_id)")
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_announcement_reads_announcement_id ON announcement_reads (announcement_id)")
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_announcement_reads_updated_at ON announcement_reads(updated_at)")
+        for index_sql in indexes:
+            cur.execute(index_sql)
+        
+        print("✓ All indexes created/verified")
 
-        # Add indexes for password reset tokens (ADD THIS TOO)
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_token ON password_reset_tokens (token)")
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_user_id ON password_reset_tokens (user_id)")
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_expires_at ON password_reset_tokens (expires_at)")
-        # Update announcements table constraints if they exist (migration)
-        try:
-            # Drop old constraints if they exist
-            cur.execute("""
-                ALTER TABLE announcements 
-                DROP CONSTRAINT IF EXISTS announcements_target_audience_check
-            """)
-            
-            # Add new constraints
-            cur.execute("""
-                ALTER TABLE announcements 
-                ADD CONSTRAINT announcements_target_audience_check 
-                CHECK (target_audience IN ('all', 'users', 'assignees', 'admins', 'user', 'assignee', 'admin'))
-            """)
-            
-            print("Announcements table constraints updated successfully.")
-        except Exception as e:
-            print(f"Warning: Could not update announcements constraints: {e}")
-            # Continue execution even if constraint update fails
 
-        # Create the trigger function for updated_at columns
+        print("Creating triggers...")
+        
+        # Create trigger function
         cur.execute("""
             CREATE OR REPLACE FUNCTION update_updated_at_column()
             RETURNS TRIGGER AS $$
@@ -258,10 +428,11 @@ def initialize_database():
             $$ language 'plpgsql'
         """)
 
-        # Create triggers for updated_at columns
+        # Create triggers for each table
         cur.execute("""
             DO $$
             BEGIN
+                -- Tickets trigger
                 IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_tickets_updated_at') THEN
                     CREATE TRIGGER update_tickets_updated_at 
                         BEFORE UPDATE ON tickets 
@@ -269,6 +440,7 @@ def initialize_database():
                         EXECUTE FUNCTION update_updated_at_column();
                 END IF;
                 
+                -- Ticket history trigger
                 IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_ticket_history_updated_at') THEN
                     CREATE TRIGGER update_ticket_history_updated_at 
                         BEFORE UPDATE ON ticket_history 
@@ -276,6 +448,7 @@ def initialize_database():
                         EXECUTE FUNCTION update_updated_at_column();
                 END IF;
                 
+                -- Announcements trigger
                 IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_announcements_updated_at') THEN
                     CREATE TRIGGER update_announcements_updated_at 
                         BEFORE UPDATE ON announcements 
@@ -283,9 +456,18 @@ def initialize_database():
                         EXECUTE FUNCTION update_updated_at_column();
                 END IF;
                 
+                -- Announcement reads trigger
                 IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_announcement_reads_updated_at') THEN
                     CREATE TRIGGER update_announcement_reads_updated_at 
                         BEFORE UPDATE ON announcement_reads 
+                        FOR EACH ROW 
+                        EXECUTE FUNCTION update_updated_at_column();
+                END IF;
+                
+                -- Organizations trigger
+                IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_organizations_updated_at') THEN
+                    CREATE TRIGGER update_organizations_updated_at 
+                        BEFORE UPDATE ON organizations 
                         FOR EACH ROW 
                         EXECUTE FUNCTION update_updated_at_column();
                 END IF;
@@ -296,7 +478,7 @@ def initialize_database():
         conn.commit()
         cur.close()
         conn.close()
-        print("Tables created or verified successfully.")
+        
     except Exception as e:
         print(f"Error creating tables: {e}")
         traceback.print_exc()
@@ -311,6 +493,133 @@ def get_db_connection():
         print("Database connection failed:", e)
         traceback.print_exc()
         return None
+    
+# --- Organization Helper Functions ---
+def get_user_organization(user_id):
+    """Get the organization for a given user"""
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return None
+        
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT o.org_id, o.org_name, o.org_slug, o.subscription_tier, 
+                   o.subscription_status, o.max_users, o.primary_color, o.logo_url
+            FROM organizations o
+            JOIN users u ON o.org_id = u.org_id
+            WHERE u.user_id = %s
+        """, (user_id,))
+        
+        result = cur.fetchone()
+        cur.close()
+        conn.close()
+        
+        if result:
+            return {
+                'org_id': result[0],
+                'org_name': result[1],
+                'org_slug': result[2],
+                'subscription_tier': result[3],
+                'subscription_status': result[4],
+                'max_users': result[5],
+                'primary_color': result[6],
+                'logo_url': result[7]
+            }
+        return None
+        
+    except Exception as e:
+        print(f"Error getting user organization: {e}")
+        return None
+
+def check_organization_limits(org_id):
+    """Check if organization has reached its limits"""
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return {'can_add_users': False, 'can_create_tickets': False}
+        
+        cur = conn.cursor()
+        
+        # Get organization limits
+        cur.execute("""
+            SELECT max_users, max_tickets_per_month, subscription_status
+            FROM organizations
+            WHERE org_id = %s
+        """, (org_id,))
+        
+        result = cur.fetchone()
+        if not result:
+            return {'can_add_users': False, 'can_create_tickets': False}
+        
+        max_users, max_tickets_per_month, sub_status = result
+        
+        # Check if subscription is active
+        if sub_status not in ['active', 'trial']:
+            return {'can_add_users': False, 'can_create_tickets': False}
+        
+        # Count current users
+        cur.execute("""
+            SELECT COUNT(*) FROM users WHERE org_id = %s
+        """, (org_id,))
+        current_users = cur.fetchone()[0]
+        
+        # Count tickets this month
+        cur.execute("""
+            SELECT COUNT(*) 
+            FROM tickets 
+            WHERE org_id = %s 
+            AND created_at >= DATE_TRUNC('month', CURRENT_DATE)
+        """, (org_id,))
+        current_tickets = cur.fetchone()[0]
+        
+        cur.close()
+        conn.close()
+        
+        return {
+            'can_add_users': current_users < max_users,
+            'can_create_tickets': current_tickets < max_tickets_per_month,
+            'current_users': current_users,
+            'max_users': max_users,
+            'current_tickets': current_tickets,
+            'max_tickets_per_month': max_tickets_per_month
+        }
+        
+    except Exception as e:
+        print(f"Error checking organization limits: {e}")
+        return {'can_add_users': False, 'can_create_tickets': False}
+
+def get_organization_departments(org_id):
+    """Get all departments for an organization"""
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return []
+        
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT dept_id, dept_name, dept_slug, description
+            FROM org_departments
+            WHERE org_id = %s AND is_active = TRUE
+            ORDER BY dept_name
+        """, (org_id,))
+        
+        departments = []
+        for row in cur.fetchall():
+            departments.append({
+                'dept_id': row[0],
+                'dept_name': row[1],
+                'dept_slug': row[2],
+                'description': row[3]
+            })
+        
+        cur.close()
+        conn.close()
+        return departments
+        
+    except Exception as e:
+        print(f"Error getting organization departments: {e}")
+        return []
 
 # --- Session Configuration ---
 def configure_session_timeout():
@@ -359,6 +668,28 @@ def validate_target_audience(audience):
     valid_audiences = ['all', 'users', 'assignees', 'admins', 'user', 'assignee', 'admin']
     return audience.lower() in valid_audiences
 
+def require_org_context(f):
+    """Decorator to ensure user has valid organization context"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            flash('Please log in to continue.', 'error')
+            return redirect(url_for('login'))
+        
+        if 'org_id' not in session:
+            # Organization context missing - refresh from database
+            org_info = get_user_organization(session['user_id'])
+            if org_info:
+                session['org_id'] = org_info['org_id']
+                session['org_name'] = org_info['org_name']
+                session['org_slug'] = org_info['org_slug']
+                session['subscription_tier'] = org_info['subscription_tier']
+            else:
+                flash('Organization not found. Please contact support.', 'error')
+                return redirect(url_for('logout'))
+        
+        return f(*args, **kwargs)
+    return decorated_function
 
 # --- Routes ---
 
@@ -647,18 +978,18 @@ def register():
     if request.method == 'POST':
         name = request.form.get('name', '').strip()
         surname = request.form.get('surname', '').strip()
-        email = request.form.get('email', '').strip()
+        email = request.form.get('email', '').strip().lower()
         password = request.form.get('password', '')
         region = request.form.get('region', '').strip()
-        role = request.form.get('role', 'user').strip().lower()
+        role = request.form.get('role', '').strip()
 
-        if not email or not password:
-            flash("Email and password are required.", "error")
+        if not all([name, surname, email, password, region, role]):
+            flash("All fields are required.", "error")
             return redirect(url_for('register'))
 
-        # Validate role using our helper function
+        # Validate role
         if not validate_role(role):
-            flash("Invalid role. Must be one of: user, assignee, admin,", "error")
+            flash("Invalid role. Must be one of: user, assignee, admin", "error")
             return redirect(url_for('register'))
 
         hashed_pw = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
@@ -670,17 +1001,42 @@ def register():
                 return redirect(url_for('register'))
 
             cur = conn.cursor()
+            
+            # Get default organization ID
+            cur.execute("SELECT org_id FROM organizations WHERE org_slug = 'default-org'")
+            default_org = cur.fetchone()
+            
+            if not default_org:
+                flash("System error: Default organization not found.", "error")
+                return redirect(url_for('register'))
+            
+            default_org_id = default_org[0]
+            
+            # Check organization user limits
+            limits = check_organization_limits(default_org_id)
+            if not limits.get('can_add_users', False):
+                flash("Organization has reached maximum user limit.", "error")
+                return redirect(url_for('register'))
+            
+            # Insert user with org_id
             cur.execute("""
-                INSERT INTO users (name, surname, email, password_hash, region, role)
-                VALUES (%s, %s, %s, %s, %s, %s)
-            """, (name, surname, email, hashed_pw.decode('utf-8'), region, role))
+                INSERT INTO users (org_id, name, surname, email, password_hash, region, role)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """, (default_org_id, name, surname, email, hashed_pw.decode('utf-8'), region, role))
+            
             conn.commit()
             cur.close()
             conn.close()
+            
             flash('Registration successful! Please log in.', 'success')
             return redirect(url_for('login'))
+            
+        except psycopg2.IntegrityError:
+            flash('Registration failed. Email may already exist.', 'error')
+            print("DB error during registration: Email already exists")
+            return redirect(url_for('register'))
         except Exception as e:
-            flash('Registration failed. Email may already exist or invalid data.', 'error')
+            flash('Registration failed. Please try again.', 'error')
             print("DB error during registration:", e)
             traceback.print_exc()
             return redirect(url_for('register'))
@@ -690,7 +1046,7 @@ def register():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        email = request.form.get('email', '').strip()
+        email = request.form.get('email', '').strip().lower()
         password = request.form.get('password', '')
 
         if not email or not password:
@@ -704,7 +1060,13 @@ def login():
 
         try:
             cur = conn.cursor()
-            cur.execute("SELECT user_id, name, role, region, password_hash FROM users WHERE email = %s", (email,))
+            cur.execute("""
+                SELECT u.user_id, u.name, u.role, u.region, u.password_hash, u.org_id,
+                       o.org_name, o.org_slug, o.subscription_tier, o.subscription_status
+                FROM users u
+                JOIN organizations o ON u.org_id = o.org_id
+                WHERE u.email = %s
+            """, (email,))
             user = cur.fetchone()
             cur.close()
             conn.close()
@@ -716,16 +1078,23 @@ def login():
             return redirect(url_for('login'))
 
         if user and bcrypt.checkpw(password.encode('utf-8'), user[4].encode('utf-8')):
+            # Check if organization subscription is active
+            if user[9] not in ['active', 'trial']:
+                flash("Your organization's subscription has expired. Please contact support.", "error")
+                return redirect(url_for('login'))
+            
             session.clear() 
             session['user_id'] = user[0]
             session['name'] = user[1]
             session['role'] = user[2]
             session['region'] = user[3]
+            session['org_id'] = user[5]  # Store org_id in session
+            session['org_name'] = user[6]
+            session['org_slug'] = user[7]
+            session['subscription_tier'] = user[8]
             
             # Make session permanent to respect timeout configuration
             session.permanent = True
-
-        
 
             if user[2] == 'user':
                 return redirect(url_for('user_dashboard'))
@@ -908,11 +1277,19 @@ def reset_password(token):
             return redirect(url_for('reset_password', token=token))
 
 @app.route('/user_dashboard')
+@require_org_context
 def user_dashboard():
     
-    if 'user_id' not in session:
-        flash("Please log in to continue.", "error")
+    if 'user_id' not in session or session.get('role') not in ['user', 'assignee']:
+        flash('Access denied.', 'error')
         return redirect(url_for('login'))
+    
+    name = session.get('name')
+    region = session.get('region')
+    org_id = session.get('org_id')
+    org_name = session.get('org_name', 'Your Organization')
+    
+    departments = get_organization_departments(org_id)
 
     user_id = session.get('user_id')
 
@@ -963,7 +1340,10 @@ def user_dashboard():
         name = None
         region = None
 
-    return render_template('user_dashboard.html', submitted_tickets=submitted_tickets, assignees=assignees, name=name, region=region)
+    return render_template('user_dashboard.html', 
+                         name=name, 
+                         region=region,
+                         org_name=org_name)
 
 # Replace your existing mark_closed function with this updated version:
 
@@ -1069,72 +1449,110 @@ def get_transfer_history(ticket_id):
 
 
 @app.route('/assignee_dashboard')
+@require_org_context
 def assignee_dashboard():
     if 'user_id' not in session or session.get('role') != 'assignee':
         flash("Unauthorized access.", "error")
         return redirect(url_for('login'))
+    
+    user_id = session['user_id']
+    region = session.get('region')
+    org_id = session.get('org_id')
 
     try:
         conn = get_db_connection()
         if not conn:
             flash("Database connection failed.", "error")
-            return redirect(url_for('login'))
-
-        cur = conn.cursor()
+            assigned_tickets = []
+            submitted_tickets = []
+            closed_tickets = []
+            transferred_tickets = []
+            assignees_in_region = []
+        else:
+            cur = conn.cursor()
 
         user_id = session['user_id']
         region = session['region']
 
         # Assigned tickets (any status)
         cur.execute("""
-            SELECT t.ticket_id, t.title, t.description, t.account_number, t.meter_number, t.status, t.created_at,
-                   u.name AS submitter_name, u.surname AS submitter_surname
+            SELECT t.ticket_id, t.title, t.description, t.account_number, t.meter_number, 
+                       t.status, t.created_at, t.resolved_at,
+                       creator.name AS created_by_name, creator.surname AS created_by_surname
             FROM tickets t
-            JOIN users u ON t.created_by = u.user_id
-            WHERE t.assigned_to = %s
-            ORDER BY t.created_at DESC
-        """, (user_id,))
+            JOIN users creator ON t.created_by = creator.user_id
+            WHERE t.assigned_to = %s 
+                  AND t.org_id = %s
+                  AND t.status IN ('open', 'in-progress', 'transferred')
+                ORDER BY t.created_at DESC
+        """, (user_id, org_id))
         assigned_tickets = cur.fetchall()
 
         # Submitted tickets in region with status 'open'
         cur.execute("""
-            SELECT t.ticket_id, t.title, t.description, t.account_number, t.meter_number, t.status, t.created_at,
-                   u.name AS submitter_name, u.surname AS submitter_surname
+            SELECT t.ticket_id, t.title, t.description, t.account_number, t.meter_number, 
+                       t.status, t.created_at, t.resolved_at,
+                       assignee.name AS assigned_to_name, assignee.surname AS assigned_to_surname
             FROM tickets t
-            JOIN users u ON t.created_by = u.user_id
-            WHERE u.region = %s AND LOWER(t.status) = 'open'
-            ORDER BY t.created_at DESC
-        """, (region,))
+            JOIN users assignee ON t.assigned_to = assignee.user_id
+                WHERE t.created_by = %s 
+                  AND t.org_id = %s
+                  AND t.status IN ('open', 'in-progress', 'transferred')
+                ORDER BY t.created_at DESC
+            """, (user_id, org_id))
         submitted_tickets = cur.fetchall()
 
         # closed tickets in region
         cur.execute("""
-            SELECT t.ticket_id, t.title, t.description, t.account_number, t.meter_number, t.status, t.created_at,
-                   u.name AS submitter_name, u.surname AS submitter_surname
-            FROM tickets t
-            JOIN users u ON t.created_by = u.user_id
-            WHERE u.region = %s AND LOWER(t.status) = 'closed'
-            ORDER BY t.created_at DESC
-        """, (region,))
+                SELECT t.ticket_id, t.title, t.description, t.account_number, t.meter_number, 
+                       t.status, t.created_at, t.resolved_at,
+                       creator.name AS created_by_name, creator.surname AS created_by_surname,
+                       assignee.name AS assigned_to_name, assignee.surname AS assigned_to_surname
+                FROM tickets t
+                JOIN users creator ON t.created_by = creator.user_id
+                JOIN users assignee ON t.assigned_to = assignee.user_id
+                WHERE (t.assigned_to = %s OR t.created_by = %s)
+                  AND t.org_id = %s
+                  AND t.status = 'closed'
+                ORDER BY t.resolved_at DESC
+            """, (user_id, user_id, org_id))
         closed_tickets = cur.fetchall()
 
         # Transferred tickets in region
         cur.execute("""
-            SELECT t.ticket_id, t.title, t.description, t.account_number, t.meter_number, t.status, t.created_at,
-                   u.name AS submitter_name, u.surname AS submitter_surname
-            FROM tickets t
-            JOIN users u ON t.created_by = u.user_id
-            WHERE u.region = %s AND LOWER(t.status) = 'transferred'
-            ORDER BY t.created_at DESC
-        """, (region,))
+                SELECT DISTINCT t.ticket_id, t.title, t.description, t.account_number, 
+                       t.meter_number, t.status, t.created_at, t.resolved_at,
+                       current_assignee.name AS current_assigned_to_name,
+                       current_assignee.surname AS current_assigned_to_surname,
+                       creator.name AS created_by_name,
+                       creator.surname AS created_by_surname,
+                       th.notes AS transfer_reason,
+                       th.performed_at AS transfer_date,
+                       original_assignee.name AS transferred_by_name,
+                       original_assignee.surname AS transferred_by_surname
+                FROM tickets t
+                JOIN users creator ON t.created_by = creator.user_id
+                JOIN users current_assignee ON t.assigned_to = current_assignee.user_id
+                JOIN ticket_history th ON t.ticket_id = th.ticket_id
+                JOIN users original_assignee ON th.performed_by = original_assignee.user_id
+                WHERE t.org_id = %s
+                  AND creator.region = %s 
+                  AND th.action = 'Transferred' 
+                  AND th.performed_by = %s
+                ORDER BY th.performed_at DESC
+            """, (org_id, region, user_id))
         transferred_tickets = cur.fetchall()
 
         # Other assignees in region excluding self
         cur.execute("""
-            SELECT user_id, name, surname
-            FROM users
-            WHERE role = 'assignee' AND region = %s AND user_id != %s
-        """, (region, user_id))
+                SELECT user_id, name, surname 
+                FROM users 
+                WHERE role = 'assignee' 
+                  AND region = %s 
+                  AND org_id = %s
+                  AND user_id != %s
+                ORDER BY name
+            """, (region, org_id, user_id))
         assignees_in_region = cur.fetchall()
 
         cur.close()
@@ -1154,23 +1572,32 @@ def assignee_dashboard():
     region = session.get('region')
 
     return render_template(
-        'assignee_dashboard.html',
-        assigned_tickets=assigned_tickets,
-        submitted_tickets=submitted_tickets,
-        closed_tickets=closed_tickets,
-        transferred_tickets=transferred_tickets,
-        assignees=assignees_in_region,
-        name=name,
-        region=region
-    ) 
+    'assignee_dashboard.html',
+    assigned_tickets=assigned_tickets,
+    submitted_tickets=submitted_tickets,
+    closed_tickets=closed_tickets,
+    transferred_tickets=transferred_tickets,
+    assignees=assignees_in_region,
+    name=name,
+    region=region,
+    org_name=session.get('org_name', 'Your Organization')  # ADD THIS
+) 
 
 
 
 @app.route('/submit_ticket', methods=['POST'])
+@require_org_context
 def submit_ticket():
     if 'user_id' not in session:
         return jsonify({'error': 'You must be logged in to submit a ticket.'}), 401
 
+    org_id = session.get('org_id')
+
+    limits = check_organization_limits(org_id)
+    if not limits.get('can_create_tickets', False):
+        flash(f'Your organization has reached its monthly ticket limit ({limits.get("max_tickets_per_month", 0)} tickets). Please upgrade your plan.', 'error')
+        return redirect_to_dashboard()
+    
     # Get basic form data
     title = request.form.get('title', '').strip()
     description = request.form.get('description', '').strip()
@@ -1244,37 +1671,36 @@ def submit_ticket():
         # Insert ticket with type-specific data
         cur.execute("""
             INSERT INTO tickets (
-                title, description, account_number, meter_number, created_by, assigned_to, 
-                status, attachment_path, ticket_type, category, location, contact_info
+                org_id, title, description, ticket_type, account_number, meter_number, 
+                category, location, contact_info, status, created_by, assigned_to, 
+                created_at, attachment_path
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, 'open', %s, %s, NOW(), %s)
             RETURNING ticket_id
         """, (
-            title, description, account_number_int, meter_number, session['user_id'], 
-            assigned_to, 'open', attachment_path, ticket_type, category, location, contact_info
+            org_id,  # ADD THIS LINE
+            title, description, ticket_type, account_number_int, meter_number,
+            category, location, contact_info, session['user_id'], assigned_to, attachment_path
         ))
         
         ticket_id = cur.fetchone()[0]
 
         # Log ticket submission in history
         ticket_type_display = "Meter" if ticket_type == 'meter' else "General"
+        
         cur.execute("""
-            INSERT INTO ticket_history (ticket_id, action, name, role, performed_by, notes)
-            VALUES (%s, %s, %s, %s, %s, %s)
+            INSERT INTO ticket_history (ticket_id, action, name, role, performed_by, notes, performed_at)
+            VALUES (%s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP)
         """, (
-            ticket_id,
-            'Submitted',
-            session['name'],
-            session['role'],
-            session['user_id'],
-            f'{ticket_type_display} ticket submitted and assigned to user_id {assigned_to}.'
+            ticket_id, 'Created', session['name'], session['role'], 
+            session['user_id'], f'Ticket created and assigned'
         ))
 
         conn.commit()
         cur.close()
         conn.close()
 
-        # NEW: Send email notification to assignee
+        # Send email notification
         notify_ticket_action(ticket_id, 'created')
 
         flash(f'{ticket_type_display} ticket submitted successfully!', 'success')
@@ -1294,17 +1720,19 @@ def redirect_to_dashboard():
         return redirect(url_for('user_dashboard'))
     
 @app.route('/api/user_tickets', methods=['GET'])
+@require_org_context
 def get_user_tickets():
     if 'user_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
 
     user_id = session['user_id']
+    org_id = session.get('org_id')
 
     try:
         conn = get_db_connection()
         cur = conn.cursor()
 
-        # Updated query to include surnames for all name fields
+        # Updated query with org_id filter
         cur.execute("""
             SELECT t.ticket_id, t.title, t.description, t.account_number, t.meter_number, 
                    t.status, t.created_at, t.resolved_at,
@@ -1328,9 +1756,9 @@ def get_user_tickets():
                 ORDER BY ticket_id, performed_at DESC
             ) th ON t.ticket_id = th.ticket_id
             LEFT JOIN users transfer_user ON th.performed_by = transfer_user.user_id
-            WHERE t.created_by = %s
+            WHERE t.created_by = %s AND t.org_id = %s
             ORDER BY t.created_at DESC
-        """, (user_id,))
+        """, (user_id, org_id))
 
         all_tickets = cur.fetchall()
 
@@ -1378,11 +1806,13 @@ def get_user_tickets():
 
     
 @app.route('/api/submitted_tickets', methods=['GET'])
+@require_org_context
 def get_submitted_tickets():
     if 'user_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
         
     user_id = session['user_id']
+    org_id = session.get('org_id')
 
     print(f"=== SUBMITTED TICKETS DEBUG ===")
     print(f"Current user requesting: {session.get('name')}")
@@ -1394,7 +1824,6 @@ def get_submitted_tickets():
         conn = get_db_connection()
         cur = conn.cursor()
 
-        # Updated query to include surnames for all name fields
         cur.execute("""
             SELECT t.ticket_id, t.title, t.description, t.account_number, t.meter_number, 
                    t.status, t.created_at, t.resolved_at,
@@ -1418,9 +1847,9 @@ def get_submitted_tickets():
                 ORDER BY ticket_id, performed_at DESC
             ) th ON t.ticket_id = th.ticket_id
             LEFT JOIN users transfer_user ON th.performed_by = transfer_user.user_id
-            WHERE t.created_by = %s AND LOWER(t.status) != 'closed'
+            WHERE t.created_by = %s AND t.org_id = %s AND LOWER(t.status) != 'closed'
             ORDER BY t.created_at DESC
-        """, (user_id,))
+        """, (user_id, org_id))
         
         submitted_tickets = cur.fetchall()
 
@@ -1441,7 +1870,7 @@ def get_submitted_tickets():
                 'transfer_notes': t[16],
                 'attachment_path': t[17]
             } for t in tickets]
-
+        
         cur.close()
         conn.close()
         
@@ -1453,17 +1882,18 @@ def get_submitted_tickets():
         return jsonify({'error': 'Error fetching tickets'}), 500
     
 @app.route('/api/closed_tickets', methods=['GET'])
+@require_org_context
 def get_closed_tickets():
     if 'user_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
         
     user_id = session['user_id']
-    
+    org_id = session.get('org_id')
+
     try:
         conn = get_db_connection()
         cur = conn.cursor()
 
-        # Updated query to include surnames for all name fields
         cur.execute("""
             SELECT t.ticket_id, t.title, t.description, t.account_number, t.meter_number, 
                    t.status, t.created_at, t.resolved_at,
@@ -1487,9 +1917,11 @@ def get_closed_tickets():
                 ORDER BY ticket_id, performed_at DESC
             ) th ON t.ticket_id = th.ticket_id
             LEFT JOIN users transfer_user ON th.performed_by = transfer_user.user_id
-            WHERE (t.created_by = %s OR t.assigned_to = %s) AND t.status = 'closed'
+            WHERE (t.created_by = %s OR t.assigned_to = %s) 
+              AND t.org_id = %s 
+              AND t.status = 'closed'
             ORDER BY t.created_at DESC
-        """, (user_id, user_id))
+        """, (user_id, user_id, org_id))
         
         tickets = cur.fetchall()
 
@@ -1621,13 +2053,14 @@ def transfer_ticket(ticket_id):
         return jsonify({'error': 'An error occurred while transferring the ticket'}), 500
     
 @app.route('/api/transferred_tickets', methods=['GET'])
+@require_org_context
 def get_transferred_tickets():
-    """Get tickets that were transferred BY the current user"""
     if 'user_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
 
     user_id = session['user_id']
     region = session['region']
+    org_id = session.get('org_id')
     
     print(f"DEBUG: Looking for transfers by user_id={user_id}, region={region}")
 
@@ -1635,40 +2068,29 @@ def get_transferred_tickets():
         conn = get_db_connection()
         cur = conn.cursor()
 
-        # First, let's check if this user has made any transfers at all
-        cur.execute("""
-            SELECT COUNT(*) FROM ticket_history 
-            WHERE performed_by = %s AND action = 'Transferred'
-        """, (user_id,))
-        transfer_count = cur.fetchone()[0]
-        print(f"DEBUG: User has performed {transfer_count} transfers total")
-
-        # Let's also check the ticket_history table structure
-        cur.execute("SELECT * FROM ticket_history WHERE action = 'Transferred' LIMIT 1")
-        sample_history = cur.fetchone()
-        print(f"DEBUG: Sample history record: {sample_history}")
-
-        # Fixed query - proper JOIN order with surnames
         cur.execute("""
             SELECT DISTINCT 
                 t.ticket_id, t.title, t.description, t.account_number, t.meter_number, 
                 t.status, t.created_at, t.resolved_at,
-                current_assignee.name AS current_assigned_to_name, current_assignee.surname AS current_assigned_to_surname,
+                current_assignee.name AS current_assigned_to_name, 
+                current_assignee.surname AS current_assigned_to_surname,
                 cb.name AS created_by_name, cb.surname AS created_by_surname,
                 th.notes AS transfer_reason,
                 th.performed_at AS transfer_date,
-                original_assignee.name AS transferred_by_name, original_assignee.surname AS transferred_by_surname
+                original_assignee.name AS transferred_by_name, 
+                original_assignee.surname AS transferred_by_surname
             FROM tickets t
             JOIN ticket_history th ON t.ticket_id = th.ticket_id 
             JOIN users u ON t.created_by = u.user_id
             LEFT JOIN users current_assignee ON t.assigned_to = current_assignee.user_id
             LEFT JOIN users cb ON t.created_by = cb.user_id
             LEFT JOIN users original_assignee ON th.performed_by = original_assignee.user_id
-            WHERE u.region = %s 
-            AND th.action = 'Transferred' 
-            AND th.performed_by = %s
+            WHERE t.org_id = %s
+              AND u.region = %s 
+              AND th.action = 'Transferred' 
+              AND th.performed_by = %s
             ORDER BY th.performed_at DESC
-        """, (region, user_id))
+        """, (org_id, region, user_id))
 
         transferred_tickets = cur.fetchall()
         print(f"DEBUG: Query returned {len(transferred_tickets) if transferred_tickets else 0} tickets")
@@ -1694,7 +2116,7 @@ def get_transferred_tickets():
                 'transfer_date': t[13].strftime('%Y-%m-%d %H:%M:%S') if t[13] else None,
                 'transferred_by_name': f"{t[14]} {t[15]}" if t[14] and t[15] else t[14] or "Unknown"
             } for t in tickets]
-
+        
         formatted_tickets = format_tickets(transferred_tickets)
         print(f"DEBUG: Formatted {len(formatted_tickets)} tickets")
 
@@ -1706,9 +2128,6 @@ def get_transferred_tickets():
     except Exception as e:
         print("Error fetching transferred tickets:", e)
         traceback.print_exc()
-        print(f"Returning {len(transferred_tickets)} transferred tickets")
-        if transferred_tickets:
-            print("Sample ticket:", format_tickets(transferred_tickets)[0])
         return jsonify({'error': 'Error fetching tickets'}), 500
 
 # Find your update_ticket_status function and add this line before the return statement:
@@ -1806,11 +2225,13 @@ def update_ticket_status(ticket_id):
 # Replace your get_assigned_tickets route with this fixed version:
 
 @app.route('/api/assigned_tickets', methods=['GET'])
+@require_org_context
 def get_assigned_tickets():
     if 'user_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
 
     user_id = session['user_id']
+    org_id = session.get('org_id')
 
     try:
         conn = get_db_connection()
@@ -1840,9 +2261,9 @@ def get_assigned_tickets():
                 ORDER BY ticket_id, performed_at DESC
             ) th ON t.ticket_id = th.ticket_id
             LEFT JOIN users transfer_user ON th.performed_by = transfer_user.user_id
-            WHERE t.assigned_to = %s AND t.status != 'closed'
+            WHERE t.assigned_to = %s AND t.org_id = %s AND t.status != 'closed'
             ORDER BY t.created_at DESC
-        """, (user_id,))
+        """, (user_id, org_id))
 
         assigned_tickets = cur.fetchall()
 
@@ -1863,7 +2284,7 @@ def get_assigned_tickets():
                 'transfer_notes': t[16],
                 'attachment_path': t[17]
             } for t in tickets]
-
+        
         cur.close()
         conn.close()
 
@@ -1889,32 +2310,35 @@ def logout():
         return redirect(url_for('login'))
 
 @app.route('/admin/dashboard')
+@require_org_context
 def admin_dashboard():
     if 'user_id' not in session or session.get('role') != 'admin':
         flash('Access denied. Admin privileges required.', 'error')
         return redirect(url_for('login'))
+    
+    org_id = session.get('org_id')
 
     conn = get_db_connection()
     cur = conn.cursor()
     
     # Get total tickets
-    cur.execute("SELECT COUNT(*) FROM tickets")
+    cur.execute("SELECT COUNT(*) FROM tickets WHERE org_id = %s", (org_id,))
     total = cur.fetchone()[0]
     
     # Get open tickets
-    cur.execute("SELECT COUNT(*) FROM tickets WHERE LOWER(status) = 'open'")
+    cur.execute("SELECT COUNT(*) FROM tickets WHERE org_id = %s AND LOWER(status) = 'open'", (org_id,))
     open_count = cur.fetchone()[0]
     
     # Get in-progress tickets
-    cur.execute("SELECT COUNT(*) FROM tickets WHERE LOWER(status) = 'in-progress'")
+    cur.execute("SELECT COUNT(*) FROM tickets WHERE org_id = %s AND LOWER(status) = 'in-progress'", (org_id,))
     in_progress = cur.fetchone()[0]
     
     # Get transferred tickets
-    cur.execute("SELECT COUNT(*) FROM tickets WHERE LOWER(status) = 'transferred'")
+    cur.execute("SELECT COUNT(*) FROM tickets WHERE org_id = %s AND LOWER(status) = 'transferred'", (org_id,))
     transferred = cur.fetchone()[0]
     
     # Get completed tickets
-    cur.execute("SELECT COUNT(*) FROM tickets WHERE LOWER(status) IN ('completed', 'closed')")
+    cur.execute("SELECT COUNT(*) FROM tickets WHERE org_id = %s AND LOWER(status) IN ('completed', 'closed')", (org_id,))
     completed = cur.fetchone()[0]
     
     cur.close()
@@ -1981,9 +2405,12 @@ def admin_settings():
         return redirect('/admin/dashboard')
 
 @app.route('/api/admin/users')
+@require_org_context
 def get_users():
     if 'user_id' not in session or session.get('role') != 'admin':
         return jsonify({'error': 'Unauthorized'}), 401
+
+    org_id = session.get('org_id')
 
     try:
         conn = get_db_connection()
@@ -2007,9 +2434,10 @@ def get_users():
                 COUNT(DISTINCT CASE WHEN t.status = 'closed' THEN t.ticket_id END) as closed_tickets
             FROM users u
             LEFT JOIN tickets t ON u.user_id = t.created_by
+            WHERE u.org_id = %s
             GROUP BY u.user_id
             ORDER BY u.created_at DESC
-        """)
+        """, (org_id,))
         
         users = []
         for row in cur.fetchall():
@@ -2099,12 +2527,13 @@ def admin_get_user_tickets(user_id):
         return jsonify({'error': 'Internal server error'}), 500
 
 @app.route('/api/admin/chart-data')
+@require_org_context
 def get_chart_data():
     if 'user_id' not in session or session.get('role') != 'admin':
         return jsonify({'error': 'Unauthorized'}), 401
 
-    # Get region filter from query parameters
     region_filter = request.args.get('region', '')
+    org_id = session.get('org_id')
 
     try:
         conn = get_db_connection()
@@ -2113,12 +2542,17 @@ def get_chart_data():
 
         cur = conn.cursor()
         
-        # Base query with optional region filter
         base_query = """
             FROM tickets t
             JOIN users u ON t.created_by = u.user_id
+            WHERE t.org_id = %s
         """
-        region_where = " WHERE u.region = %s" if region_filter else ""
+        
+        params = [org_id]
+        
+        if region_filter:
+            base_query += " AND u.region = %s"
+            params.append(region_filter)
         
         # Get ticket distribution data
         distribution_query = f"""
@@ -2126,27 +2560,24 @@ def get_chart_data():
                 t.status,
                 COUNT(*) as count
             {base_query}
-            {region_where}
             GROUP BY t.status
         """
-        cur.execute(distribution_query, (region_filter,) if region_filter else ())
+        cur.execute(distribution_query, params)
         distribution_data = cur.fetchall()
         
-        # Get ticket trends data (last 6 months)
+        # Get ticket trends data
         trends_query = f"""
             SELECT 
                 DATE_TRUNC('month', t.created_at) as month,
                 COUNT(*) as count
             {base_query}
-            WHERE t.created_at >= NOW() - INTERVAL '6 months'
-            {region_where.replace('WHERE', 'AND') if region_filter else ''}
+            AND t.created_at >= NOW() - INTERVAL '6 months'
             GROUP BY DATE_TRUNC('month', t.created_at)
             ORDER BY month ASC
         """
-        cur.execute(trends_query, (region_filter,) if region_filter else ())
+        cur.execute(trends_query, params)
         trends_data = cur.fetchall()
 
-        # Format distribution data
         distribution = {
             'labels': [],
             'data': []
@@ -2161,13 +2592,11 @@ def get_chart_data():
                 distribution['labels'].append(mapped_status)
                 distribution['data'].append(count)
 
-        # Format trends data
         trends = {
             'labels': [],
             'data': []
         }
         for month, count in trends_data:
-            # Format month as "MMM YYYY" (e.g., "Jan 2024")
             formatted_month = month.strftime('%b %Y')
             trends['labels'].append(formatted_month)
             trends['data'].append(count)
@@ -2218,12 +2647,14 @@ def get_regions():
         return jsonify({'error': 'Internal server error'}), 500
 
 @app.route('/api/admin/dashboard-stats')
+@require_org_context
 def get_dashboard_stats():
     if 'user_id' not in session or session.get('role') != 'admin':
         return jsonify({'error': 'Unauthorized'}), 401
 
     # Get region filter from query parameters
     region_filter = request.args.get('region', '')
+    org_id = session.get('org_id')
 
     try:
         conn = get_db_connection()
@@ -2232,35 +2663,37 @@ def get_dashboard_stats():
 
         cur = conn.cursor()
         
-        # Base query with optional region filter
         base_query = """
             SELECT COUNT(*) FROM tickets t
             JOIN users u ON t.created_by = u.user_id
+            WHERE t.org_id = %s
         """
-        region_where = " WHERE u.region = %s" if region_filter else ""
+        
+        params = [org_id]
+        region_clause = ""
+        
+        if region_filter:
+            region_clause = " AND u.region = %s"
+            params.append(region_filter)
         
         # Get total tickets
-        cur.execute(base_query + region_where, (region_filter,) if region_filter else ())
+        cur.execute(base_query + region_clause, params)
         total = cur.fetchone()[0]
         
         # Get open tickets
-        open_query = base_query + region_where + " AND LOWER(t.status) = 'open'"
-        cur.execute(open_query, (region_filter,) if region_filter else ())
+        cur.execute(base_query + region_clause + " AND LOWER(t.status) = 'open'", params + [region_filter] if region_filter else params)
         open_count = cur.fetchone()[0]
         
         # Get in-progress tickets
-        in_progress_query = base_query + region_where + " AND LOWER(t.status) = 'in-progress'"
-        cur.execute(in_progress_query, (region_filter,) if region_filter else ())
+        cur.execute(base_query + region_clause + " AND LOWER(t.status) = 'in-progress'", params + [region_filter] if region_filter else params)
         in_progress = cur.fetchone()[0]
         
         # Get transferred tickets
-        transferred_query = base_query + region_where + " AND LOWER(t.status) = 'transferred'"
-        cur.execute(transferred_query, (region_filter,) if region_filter else ())
+        cur.execute(base_query + region_clause + " AND LOWER(t.status) = 'transferred'", params + [region_filter] if region_filter else params)
         transferred = cur.fetchone()[0]
         
         # Get completed tickets
-        completed_query = base_query + region_where + " AND LOWER(t.status) IN ('completed', 'closed')"
-        cur.execute(completed_query, (region_filter,) if region_filter else ())
+        cur.execute(base_query + region_clause + " AND LOWER(t.status) IN ('completed', 'closed')", params + [region_filter] if region_filter else params)
         completed = cur.fetchone()[0]
 
         cur.close()
@@ -2345,6 +2778,7 @@ def get_recent_activity():
         return jsonify({'error': 'Internal server error'}), 500
 
 @app.route('/api/admin/export-data', methods=['POST'])
+@require_org_context  
 def export_data():
     if 'user_id' not in session or session.get('role') != 'admin':
         return jsonify({'error': 'Unauthorized'}), 401
@@ -2353,6 +2787,7 @@ def export_data():
     start_date = request.json.get('start_date', '')
     end_date = request.json.get('end_date', '')
     region = request.json.get('region', '')
+    org_id = session.get('org_id')  # ADD THIS
     
     try:
         conn = get_db_connection()
@@ -2394,10 +2829,10 @@ def export_data():
                 ORDER BY ticket_id, performed_at DESC
             ) th ON t.ticket_id = th.ticket_id
             LEFT JOIN users transfer_user ON th.performed_by = transfer_user.user_id
-            WHERE 1=1
+            WHERE t.org_id = %s
         """
         
-        params = []
+        params = [org_id]  # START WITH org_id
         
         # Add date range filters
         if start_date:
@@ -2406,7 +2841,7 @@ def export_data():
         
         if end_date:
             query += " AND t.created_at <= %s"
-            params.append(end_date + " 23:59:59")  # Include the entire end date
+            params.append(end_date + " 23:59:59")
         
         # Add region filter
         if region:
@@ -2584,21 +3019,21 @@ def get_admin_announcements():
         return jsonify({'error': 'Internal server error'}), 500
 
 @app.route('/api/user/announcements', methods=['GET'])
+@require_org_context
 def get_user_announcements():
     if 'user_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
 
+    user_role = session.get('role', 'user')
+    org_id = session.get('org_id')
+
     try:
-        user_role = session.get('role', 'user')
-        user_region = session.get('region')
-        
         conn = get_db_connection()
         if not conn:
             return jsonify({'error': 'Database connection failed'}), 500
 
         cur = conn.cursor()
         
-        # Build target audience conditions based on user role
         target_conditions = ["a.target_audience = 'all'"]
         if user_role == 'user':
             target_conditions.append("a.target_audience = 'users'")
@@ -2609,7 +3044,6 @@ def get_user_announcements():
         
         target_condition = " OR ".join(target_conditions)
         
-        # Get active announcements for the user
         cur.execute(f"""
             SELECT 
                 a.announcement_id,
@@ -2620,9 +3054,11 @@ def get_user_announcements():
                 u.name as created_by_name
             FROM announcements a
             LEFT JOIN users u ON a.created_by = u.user_id
-            WHERE a.is_active = true AND ({target_condition})
+            WHERE a.org_id = %s 
+              AND a.is_active = true 
+              AND ({target_condition})
             ORDER BY a.created_at DESC
-        """)
+        """, (org_id,))
         
         announcements = []
         for row in cur.fetchall():
@@ -2643,7 +3079,7 @@ def get_user_announcements():
     except Exception as e:
         print(f"Error fetching user announcements: {e}")
         return jsonify({'error': 'Internal server error'}), 500
-
+    
 @app.route('/api/admin/announcements/<int:announcement_id>', methods=['PUT'])
 def update_announcement(announcement_id):
     if 'user_id' not in session or session.get('role') != 'admin':

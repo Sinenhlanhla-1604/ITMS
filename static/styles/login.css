@@ -45,7 +45,9 @@
 }
 
 .system-name {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 12px;
   font-size: 2rem;
   font-weight: 700;
   color: var(--header-color);
