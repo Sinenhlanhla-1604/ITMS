@@ -1,0 +1,1415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Assignee Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles/assignee-styles.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+  <style>
+    .logo {
+      width: 60px; /* A bit smaller for the nav bar */
+      height: auto;
+      vertical-align: middle;
+      margin-right: 10px;
+    }
+    .system-name {
+      display: flex;
+      align-items: center;
+    }
+    /* Notification System Styles */
+    .notification-container {
+      position: relative;
+      display: inline-block;
+    }
+
+    .notification-bell {
+      background: none;
+      border: none;
+      color: var(--text-color);
+      font-size: 1.2rem;
+      cursor: pointer;
+      padding: 0.5rem;
+      border-radius: 50%;
+      transition: all 0.3s ease;
+      position: relative;
+    }
+
+    .notification-bell:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+      transform: scale(1.1);
+    }
+
+    .notification-badge {
+      position: absolute;
+      top: 0;
+      right: 0;
+      background-color: #e74c3c;
+      color: white;
+      border-radius: 50%;
+      padding: 0.2rem 0.4rem;
+      font-size: 0.7rem;
+      font-weight: bold;
+      min-width: 1.2rem;
+      text-align: center;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
+
+    .notification-dropdown {
+      position: absolute;
+      top: 100%;
+      right: 0;
+      width: 350px;
+      max-height: 400px;
+      background-color: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 0.5rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      z-index: 1000;
+      display: none;
+      overflow: hidden;
+    }
+
+    .notification-dropdown.show {
+      display: block;
+      animation: slideDown 0.3s ease-out;
+    }
+
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .notification-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem;
+      border-bottom: 1px solid var(--border-color);
+      background-color: var(--primary-color);
+      color: white;
+    }
+
+    .notification-header h4 {
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 600;
+    }
+
+    .close-notifications {
+      background: none;
+      border: none;
+      color: white;
+      cursor: pointer;
+      font-size: 1rem;
+      padding: 0.25rem;
+      border-radius: 50%;
+      transition: background-color 0.3s ease;
+    }
+
+    .close-notifications:hover {
+      background-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .notification-list {
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .notification-item {
+      padding: 1rem;
+      border-bottom: 1px solid var(--border-color);
+      transition: background-color 0.3s ease;
+    }
+
+    .notification-item:hover {
+      background-color: rgba(255, 255, 255, 0.05);
+    }
+
+    .notification-item:last-child {
+      border-bottom: none;
+    }
+
+    .notification-title {
+      font-weight: 600;
+      color: var(--text-color);
+      margin-bottom: 0.5rem;
+    }
+
+    .notification-content {
+      color: var(--text-color);
+      opacity: 0.8;
+      margin-bottom: 0.5rem;
+      line-height: 1.4;
+    }
+
+    .notification-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.8rem;
+      color: var(--text-color);
+      opacity: 0.6;
+    }
+
+    .notification-target {
+      background-color: var(--primary-color);
+      color: white;
+      padding: 0.2rem 0.5rem;
+      border-radius: 0.25rem;
+      font-size: 0.7rem;
+    }
+
+    .no-notifications {
+      padding: 2rem;
+      text-align: center;
+      color: var(--text-color);
+      opacity: 0.6;
+    }
+
+    .loading-notifications {
+      padding: 2rem;
+      text-align: center;
+      color: var(--text-color);
+      opacity: 0.6;
+    }
+
+    /* Responsive design for notifications */
+    @media (max-width: 768px) {
+      .notification-dropdown {
+        width: 300px;
+        right: -50px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .notification-dropdown {
+        width: 280px;
+        right: -80px;
+      }
+    }
+
+    .ticket-info-item a {
+      background: #007bff;
+      color: #fff !important;
+      padding: 3px 10px;
+      border-radius: 4px;
+      text-decoration: none;
+      font-weight: bold;
+      transition: background 0.2s;
+    }
+    .ticket-info-item a:hover {
+      background: #d35400;
+      color: #fff !important;
+    }
+  </style>
+</head>  
+<body> 
+  <!-- Top Navigation Bar -->
+  <nav class="top-nav">
+    <div class="system-name">
+      <img src="{{ url_for('static', filename='img/bcm_logo.png') }}" alt="BCM Logo" class="logo">
+      <span>BCMM CONTROL ROOM</span>
+    </div>
+    <div class="user-profile">
+      <span>{{ name }}</span>
+      <img src="https://ui-avatars.com/api/?name={{ name }}&background=2c5282&color=fff" alt="Profile" />
+      <div class="nav-controls">
+        <button class="theme-toggle" onclick="toggleTheme()" title="Toggle dark/light mode">
+          <i class="fas fa-moon"></i>
+        </button>
+        <div class="notification-container">
+          <button class="notification-bell" onclick="toggleNotifications()" title="Notifications">
+            <i class="fas fa-bell"></i>
+            <span class="notification-badge" id="notificationBadge" style="display: none;">0</span>
+          </button>
+          <div class="notification-dropdown" id="notificationDropdown">
+            <div class="notification-header">
+              <h4>Notifications</h4>
+              <button class="close-notifications" onclick="toggleNotifications()">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+            <div class="notification-list" id="notificationList">
+              <div class="loading-notifications">Loading notifications...</div>
+            </div>
+          </div>
+        </div>
+        <button id="logoutBtn1" onclick="logoutUser()" title="Logout">
+          <i class="fas fa-sign-out-alt"></i>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="dashboard-container">
+    <!-- Welcome Section -->
+    <div class="welcome-section">
+      <div>
+        <h1>Welcome {{ name }}!</h1>
+        <p class="region-info"><i class="fas fa-map-marker-alt"></i> You are in the <strong>{{ session.region }}</strong> region.</p>
+      </div>
+    </div>
+
+    <!-- Flash Messages -->
+    <div id="flash-messages">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} flash-message" data-category="{{ category }}">
+              {{ message }}
+              <button type="button" class="alert-close" onclick="dismissFlash(this.parentElement)">
+                &times;
+              </button>
+            </div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+    </div>
+
+    <!-- Tabs Navigation -->
+    <div class="tabs">
+      <button class="tab-button active" onclick="showTab('logTicket', event)">
+        <i class="fas fa-plus-circle"></i> Log Ticket
+      </button>
+      <button class="tab-button" onclick="showTab('submitted', event)">
+        <i class="fas fa-paper-plane"></i> Submitted
+      </button>
+      <button class="tab-button" onclick="showTab('assigned', event)">
+        <i class="fas fa-user-check"></i> Tickets Assigned To Me
+      </button>
+      <button class="tab-button" onclick="showTab('transferred', event)">
+        <i class="fas fa-exchange-alt"></i> Transferred
+      </button>
+      <button class="tab-button" onclick="showTab('closed', event)">
+        <i class="fas fa-check-circle"></i> Closed
+      </button>
+    </div>
+
+    <!-- Log Ticket -->
+    <div id="logTicket" class="tab-content active">
+      <div class="form-container">
+        <div class="form-header">
+          <h2><i class="fas fa-plus-circle"></i> Log a New Ticket</h2>
+          
+          <!-- Ticket Type Toggle -->
+          <div class="ticket-type-toggle">
+            <div class="toggle-option active" onclick="switchTicketType('meter')" id="meterToggle">
+              <i class="fas fa-tachometer-alt"></i>
+              <div class="option-title">Meter Issue</div>
+              <div class="option-description">Electricity meters, billing, connections</div>
+            </div>
+            <div class="toggle-option" onclick="switchTicketType('general')" id="generalToggle">
+              <i class="fas fa-tools"></i>
+              <div class="option-title">General Issue</div>
+              <div class="option-description">Maintenance, complaints, services</div>
+            </div>
+          </div>
+        </div>
+    
+        <form id="ticketForm" method="POST" action="{{ url_for('submit_ticket') }}" enctype="multipart/form-data">
+          <!-- Hidden field to track ticket type -->
+          <input type="hidden" id="ticketType" name="ticket_type" value="meter">
+    
+          <!-- Meter Ticket Section -->
+          <div id="meterSection" class="form-section active">
+            <div class="info-box">
+              <i class="fas fa-info-circle"></i>
+              <strong>Meter tickets:</strong> For electricity meter issues, billing problems, or connection troubles.
+            </div>
+            
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="meterTitle" class="required">Title</label>
+                <input type="text" id="meterTitle" name="title" required placeholder="Enter ticket title" />
+                <div class="helper-text">Brief description of the meter issue</div>
+              </div>
+    
+              <div class="form-group">
+                <label for="accountNumber" class="required">Account Number</label>
+                <input type="text" 
+                       id="accountNumber" 
+                       name="account_number" 
+                       required 
+                       pattern="[0-9]{3,15}"
+                       placeholder="Enter numeric account number" />
+                <div class="helper-text">Must be 3-15 digits</div>
+              </div>
+    
+              <div class="form-group">
+                <label for="meterNumber" class="required">Meter Number</label>
+                <input type="text" 
+                       id="meterNumber" 
+                       name="meter_number" 
+                       required 
+                       placeholder="Enter meter number" />
+                <div class="helper-text">Meter number from your account</div>
+              </div>
+    
+              <div class="form-group">
+                <label for="meterAssignedTo" class="required">Assign To</label>
+                <select id="meterAssignedTo" name="assigned_to" required>
+                  <option value="">Select Assignee</option>
+                  {% for assignee in assignees %}
+                    <option value="{{ assignee[0] }}">{{ assignee[1] }} {{ assignee[2] }}</option>
+                  {% endfor %}
+                </select>
+                <div class="helper-text">Who should handle this meter issue</div>
+              </div>
+    
+              <div class="form-group full-width">
+                <label for="meterDescription" class="required">Description</label>
+                <textarea id="meterDescription" 
+                          name="description" 
+                          required 
+                          placeholder="Describe the meter problem in detail..."></textarea>
+                <div class="helper-text">Include meter readings, error codes, or unusual behavior</div>
+              </div>
+    
+              <div class="form-group full-width">
+                <label for="meterAttachment">Attachment (optional)</label>
+                <input type="file" id="meterAttachment" name="attachment" accept=".jpg,.jpeg,.png,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip,.rar,.csv" />
+                <div class="helper-text">Photos of meter, bills, or documents (max 10MB)</div>
+              </div>
+            </div>
+          </div>
+    
+          <!-- General Ticket Section -->
+          <div id="generalSection" class="form-section">
+            <div class="info-box">
+              <i class="fas fa-info-circle"></i>
+              <strong>General tickets:</strong> For maintenance, complaints, service requests, or other issues.
+            </div>
+            
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="generalTitle" class="required">Title</label>
+                <input type="text" id="generalTitle" name="title" placeholder="Enter ticket title" />
+                <div class="helper-text">Brief description of the issue</div>
+              </div>
+    
+              <div class="form-group">
+                <label for="category" class="required">Category</label>
+                <select id="category" name="category">
+                  <option value="">Select Category</option>
+                  <option value="maintenance">Maintenance Request</option>
+                  <option value="complaint">Complaint</option>
+                  <option value="service">Service Request</option>
+                  <option value="infrastructure">Infrastructure Issue</option>
+                  <option value="safety">Safety Concern</option>
+                  <option value="billing">Billing (Non-meter)</option>
+                  <option value="other">Other</option>
+                </select>
+                <div class="helper-text">Choose the most appropriate category</div>
+              </div>
+    
+              <div class="form-group">
+                <label for="generalAssignedTo" class="required">Assign To</label>
+                <select id="generalAssignedTo" name="assigned_to">
+                  <option value="">Select Assignee</option>
+                  {% for assignee in assignees %}
+                    <option value="{{ assignee[0] }}">{{ assignee[1] }} {{ assignee[2] }}</option>
+                  {% endfor %}
+                </select>
+                <div class="helper-text">Who should handle this request</div>
+              </div>
+    
+              <div class="form-group">
+                <label for="location">Location/Address</label>
+                <input type="text" id="location" name="location" placeholder="Enter specific location" />
+                <div class="helper-text">Where is the issue located? (if applicable)</div>
+              </div>
+    
+              <div class="form-group">
+                <label for="contactInfo">Contact Information</label>
+                <input type="text" id="contactInfo" name="contact_info" placeholder="Phone or preferred contact" />
+                <div class="helper-text">How should we reach you for updates?</div>
+              </div>
+    
+              <div class="form-group full-width">
+                <label for="generalDescription" class="required">Description</label>
+                <textarea id="generalDescription" 
+                          name="description" 
+                          placeholder="Provide detailed information about the issue..."></textarea>
+                <div class="helper-text">Include relevant details to help resolve the issue</div>
+              </div>
+    
+              <div class="form-group full-width">
+                <label for="generalAttachment">Attachment (optional)</label>
+                <input type="file" id="generalAttachment" name="attachment" accept=".jpg,.jpeg,.png,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip,.rar,.csv" />
+                <div class="helper-text">Photos, documents, or files related to your request (max 10MB)</div>
+              </div>
+            </div>
+          </div>
+    
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" onclick="resetForm()">
+              <i class="fas fa-undo"></i>
+              Reset Form
+            </button>
+            <button type="submit" class="btn btn-primary">
+              <i class="fas fa-paper-plane"></i>
+              Submit Ticket
+            </button>
+          </div>
+        </form>
+      </div>
+      <div id="ticketResponse"></div>
+    </div>
+
+    <!-- Submitted -->
+    <div class="tab-content" id="submitted" style="display:none;">
+      <h2><i class="fas fa-paper-plane"></i> Tickets I Logged</h2>
+      <ul class="ticket-list" id="submittedList">Loading...</ul>
+    </div>
+
+    <!-- Assigned -->
+    <div class="tab-content" id="assigned" style="display:none;">
+      <h2><i class="fas fa-user-check"></i> Tickets Assigned to Me</h2>
+      <ul class="ticket-list" id="assignedTicketsList">Loading...</ul>
+    </div>
+
+    <!-- Transferred -->
+    <div class="tab-content" id="transferred" style="display:none;">
+      <h2><i class="fas fa-exchange-alt"></i> Transferred Tickets</h2>
+      <ul class="ticket-list" id="transferredList">Loading...</ul>
+    </div>
+
+    <!-- closed -->
+    <div class="tab-content" id="closed" style="display:none;">
+      <h2><i class="fas fa-check-circle"></i> Closed Tickets</h2>
+      <ul class="ticket-list" id="closedList">Loading...</ul>
+    </div>
+  </div>
+
+  <!-- Transfer Modal -->
+  <div id="transferModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeTransferModal()">&times;</span>
+      <h3><i class="fas fa-exchange-alt"></i> Transfer Ticket</h3>
+      <form id="transferForm">
+        <div class="form-group">
+          <label for="assigneeSelect">Transfer To:</label>
+          <select id="assigneeSelect" required>
+            <option value="">-- Select Assignee --</option>
+            {% for assignee in assignees %}
+              <option value="{{ assignee[0] }}">{{ assignee[1] }} {{ assignee[2] }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label for="transferReason">Reason for Transfer:</label>
+          <textarea id="transferReason" placeholder="Please provide a reason for this transfer..." required></textarea>
+        </div>
+        
+        <button type="submit" id="transferSubmitBtn">
+          <i class="fas fa-paper-plane"></i>
+          Submit Transfer
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Transfer History Modal -->
+  <div id="transferHistoryModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeTransferHistoryModal()">&times;</span>
+      <h3>Transfer History</h3>
+      <div id="transferHistoryContent">Loading...</div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="footer-content">
+      <p>&copy; 2025 Ticket Tracking and Analysis Hub. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <script>
+    // Add these functions to your existing <script> section in user_dashboard.html
+
+function switchTicketType(type) {
+  // Update toggle buttons
+  document.getElementById('meterToggle').classList.remove('active');
+  document.getElementById('generalToggle').classList.remove('active');
+  
+  if (type === 'meter') {
+    document.getElementById('meterToggle').classList.add('active');
+    document.getElementById('meterSection').classList.add('active');
+    document.getElementById('generalSection').classList.remove('active');
+    document.getElementById('ticketType').value = 'meter';
+    
+    // Clear general form fields
+    clearFormSection('general');
+    
+    // Set required fields for meter section
+    setRequiredFields('meter');
+  } else {
+    document.getElementById('generalToggle').classList.add('active');
+    document.getElementById('generalSection').classList.add('active');
+    document.getElementById('meterSection').classList.remove('active');
+    document.getElementById('ticketType').value = 'general';
+    
+    // Clear meter form fields
+    clearFormSection('meter');
+    
+    // Set required fields for general section
+    setRequiredFields('general');
+  }
+}
+
+function clearFormSection(sectionType) {
+  if (sectionType === 'meter') {
+    document.getElementById('meterTitle').value = '';
+    document.getElementById('accountNumber').value = '';
+    document.getElementById('meterNumber').value = '';
+    document.getElementById('meterAssignedTo').value = '';
+    document.getElementById('meterDescription').value = '';
+    document.getElementById('meterAttachment').value = '';
+  } else {
+    document.getElementById('generalTitle').value = '';
+    document.getElementById('category').value = '';
+    document.getElementById('generalAssignedTo').value = '';
+    document.getElementById('location').value = '';
+    document.getElementById('contactInfo').value = '';
+    document.getElementById('generalDescription').value = '';
+    document.getElementById('generalAttachment').value = '';
+  }
+}
+
+function setRequiredFields(sectionType) {
+  // Remove all required and disabled attributes first
+  document.querySelectorAll('#ticketForm input, #ticketForm select, #ticketForm textarea').forEach(field => {
+    field.removeAttribute('required');
+    field.removeAttribute('disabled');
+  });
+
+  if (sectionType === 'meter') {
+    // Enable meter fields, disable general fields
+    document.querySelectorAll('#meterSection input, #meterSection select, #meterSection textarea').forEach(field => {
+      field.removeAttribute('disabled');
+    });
+    document.querySelectorAll('#generalSection input, #generalSection select, #generalSection textarea').forEach(field => {
+      field.setAttribute('disabled', 'disabled');
+    });
+    // Set required for meter fields
+    document.getElementById('meterTitle').setAttribute('required', '');
+    document.getElementById('accountNumber').setAttribute('required', '');
+    document.getElementById('meterNumber').setAttribute('required', '');
+    document.getElementById('meterAssignedTo').setAttribute('required', '');
+    document.getElementById('meterDescription').setAttribute('required', '');
+  } else {
+    // Enable general fields, disable meter fields
+    document.querySelectorAll('#generalSection input, #generalSection select, #generalSection textarea').forEach(field => {
+      field.removeAttribute('disabled');
+    });
+    document.querySelectorAll('#meterSection input, #meterSection select, #meterSection textarea').forEach(field => {
+      field.setAttribute('disabled', 'disabled');
+    });
+    // Set required for general fields
+    document.getElementById('generalTitle').setAttribute('required', '');
+    document.getElementById('category').setAttribute('required', '');
+    document.getElementById('generalAssignedTo').setAttribute('required', '');
+    document.getElementById('generalDescription').setAttribute('required', '');
+  }
+}
+
+function resetForm() {
+  // Reset to meter type by default
+  switchTicketType('meter');
+  
+  // Clear all form fields
+  document.getElementById('ticketForm').reset();
+}
+    
+    let currentTransferTicketId = null;
+
+    // Show tab content and load tickets if applicable
+    function showTab(ticket_id, e) {
+      document.querySelectorAll('.tab-content').forEach(tc => tc.style.display = 'none');
+      document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+      document.getElementById(ticket_id).style.display = 'block';
+      e.currentTarget.classList.add('active');
+
+      if (ticket_id !== 'logTicket') {
+        loadTickets(ticket_id);
+      }
+    }
+
+    // UPDATED loadTickets function to match your API response structure
+    // UPDATED loadTickets function - Replace the existing one
+    async function loadTickets(status) {
+      const listIdMap = {
+        assigned: 'assignedTicketsList',
+        submitted: 'submittedList',
+        transferred: 'transferredList',
+        closed: 'closedList'
+      };
+      
+      // FIXED: Correct endpoint mapping
+      const endpointMap = {
+        assigned: '/api/assigned_tickets',
+        submitted: '/api/submitted_tickets',
+        transferred: '/api/transferred_tickets',  // ← FIXED: was '/api/user_tickets'
+        closed: '/api/closed_tickets'
+      };
+      
+      const errorMessages = {
+        assigned: 'Unable to load assigned tickets. Please check your connection and try again.',
+        submitted: 'Failed to retrieve submitted tickets. The system may be temporarily unavailable.',
+        transferred: 'Could not load transferred tickets. Please refresh the page or contact support.',
+        closed: 'Error loading closed tickets. The archived data may be temporarily inaccessible.'
+      };
+      
+      const noDataMessages = {
+        assigned: 'No tickets are currently assigned to you.',
+        submitted: 'You have no submitted tickets at this time.',
+        transferred: 'You have not transferred any tickets yet.',  // ← UPDATED message
+        closed: 'No closed tickets found in your history.'
+      };
+
+      const list = document.getElementById(listIdMap[status]);
+      if (!list) return;
+      list.innerHTML = 'Loading...';
+
+      try {
+        const res = await fetch(endpointMap[status]);
+        if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+        const result = await res.json();
+        
+        let data;
+        // FIXED: Handle different response structures based on your API
+        if (status === 'assigned') {
+          data = result.assigned_tickets;
+        } else if (status === 'submitted') {
+          data = result.submitted_tickets;
+        } else if (status === 'closed') {
+          data = result.closed_tickets;
+        } else if (status === 'transferred') {
+          // FIXED: Use the correct property name from your backend
+          data = result.transferred_tickets;
+        }
+        
+        console.log(`Loading ${status} tickets:`, { 
+          result, 
+          data, 
+          status,
+          availableKeys: Object.keys(result)
+        });
+
+        if (!data || !Array.isArray(data) || data.length === 0) {
+          list.innerHTML = `<li class="no-data-message">${noDataMessages[status]}</li>`;
+          return;
+        }
+
+        list.innerHTML = '';
+        data.forEach(ticket => {
+          const createdDate = new Date(ticket.created_at);
+          const formattedDate = createdDate.toLocaleString(undefined, {
+            year: 'numeric', month: 'short', day: 'numeric',
+            hour: '2-digit', minute: '2-digit', hour12: true
+          });
+
+          const li = document.createElement('li');
+          li.dataset.ticketId = ticket.ticket_id;
+
+          // Build ticket display HTML based on tab
+          let ticketHTML = `
+            <div class="ticket-card" data-status="${ticket.status.toLowerCase().replace(/[\s-]/g, '-')}">
+              <div class="ticket-header">
+                <strong>Ticket #${ticket.ticket_id}: ${ticket.title}</strong>
+                <span class="status ${ticket.status.toLowerCase().replace(/[\s-]/g, '-')}">${ticket.status}</span>
+              </div>
+              <div class="ticket-body">
+                <p> <i class="fas fa-note-sticky	"></i>
+                      <strong>Description:</strong> ${ticket.description}</p>
+                <div class="ticket-info-line">
+                  <div class="ticket-info-item">
+                    <i class="fas fa-hashtag"></i>
+                    <strong>Meter number:</strong> ${ticket.meter_number}
+                  </div>
+                  <div class="ticket-info-item">
+                    <i class="fas fa-file-invoice"></i>
+                    <strong>Account number:</strong> ${ticket.account_number}
+                  </div>
+                  <div class="ticket-info-item">
+                    <i class="fas fa-calendar"></i>
+                    <strong>Created:</strong> ${formattedDate}
+                  </div>
+                  <div class="ticket-info-item">
+                    <i class="fas fa-user"></i>
+                    <strong>Submitted by:</strong> ${ticket.created_by_name || 'Unknown'}
+                  </div>
+          `;
+
+          // Add "Currently Assigned to" for transferred tickets inside the ticket-info-line
+          if (status === 'transferred') {
+            ticketHTML += `
+              <div class="ticket-info-item">
+                <i class="fas fa-user"></i>
+                <strong>Currently Assigned to:</strong> ${ticket.current_assigned_to_name || "Unassigned"}
+              </div>
+            `;
+          }
+
+          // Add resolved date for all tickets that have been resolved (regardless of status)
+          if (ticket.resolved_at) {
+            const resolvedDate = new Date(ticket.resolved_at).toLocaleString(undefined, {
+              year: 'numeric', month: 'short', day: 'numeric',
+              hour: '2-digit', minute: '2-digit', hour12: true
+            });
+            
+            ticketHTML += `
+              <div class="ticket-info-item">
+                <i class="fas fa-check-circle"></i>
+                <strong>Resolved:</strong> ${resolvedDate}
+              </div>
+            `;
+          }
+
+          if (ticket.attachment_path) {
+            ticketHTML += `
+              <div class="ticket-info-item">
+                <i class="fas fa-paperclip"></i>
+                <strong>Attachment:</strong>
+                <a href="/uploads/${ticket.attachment_path}" target="_blank" rel="noopener">
+                  View/Download
+                </a>
+              </div>
+            `;
+          }
+
+          ticketHTML += `</div>`;
+
+          // Different information for different tabs
+          if (status === 'assigned') {
+            // Show transfer info if ticket was previously transferred
+            if (ticket.transferred_by_name && ticket.transferred_at) {
+              const transferDate = new Date(ticket.transferred_at).toLocaleString(undefined, {
+                year: 'numeric', month: 'short', day: 'numeric',
+                hour: '2-digit', minute: '2-digit', hour12: true
+              });
+              
+              ticketHTML += `
+                <div class="transfer-info">
+                  <p><strong>Transfer Information:</strong></p>
+                  <p><strong>Transferred by:</strong> ${ticket.transferred_by_name}</p>
+                  <p><strong>Transfer Date:</strong> ${transferDate}</p>
+                  <p><strong>Transfer Reason:</strong> ${ticket.transfer_notes ? ticket.transfer_notes.split(' - Reason: ')[1] || 'No reason provided' : 'No reason provided'}</p>
+                </div>
+              `;
+            }
+          } else if (status === 'submitted') {
+            // Show transfer info if ticket was transferred
+            if (ticket.transfer_info) {
+              const transferDate = ticket.transfer_info.transfer_date ? 
+                new Date(ticket.transfer_info.transfer_date).toLocaleString(undefined, {
+                  year: 'numeric', month: 'short', day: 'numeric',
+                  hour: '2-digit', minute: '2-digit', hour12: true
+                }) : 'Unknown';
+              
+              ticketHTML += `
+                <div class="transfer-info">
+                  <p><strong>Transfer Information:</strong></p>
+                  <p><strong>Last Transfer Date:</strong> ${transferDate}</p>
+                  <p><strong>Transferred By:</strong> ${ticket.transferred_by_name || 'Unknown'}</p>
+                  <p><strong>Transfer Reason:</strong> ${ticket.transfer_notes ? ticket.transfer_notes.split(' - Reason: ')[1] || 'No reason provided' : 'No reason provided'}</p>
+                  <p><strong>Currently Assigned to:</strong> ${ticket.assigned_to_name || "Unassigned"}</p>
+                </div>
+              `;
+            }
+          } else if (status === 'transferred') {
+            const transferDate = ticket.transfer_date ? 
+              new Date(ticket.transfer_date).toLocaleString(undefined, {
+                year: 'numeric', month: 'short', day: 'numeric',
+                hour: '2-digit', minute: '2-digit', hour12: true
+              }) : 'Unknown';
+            
+            ticketHTML += `
+              <div class="transfer-info">
+                <p><strong>Transfer Information:</strong></p>
+                <p><strong>Transferred Date:</strong> ${transferDate}</p>
+                <p><strong>Transfer Reason:</strong> ${ticket.transfer_reason ? ticket.transfer_reason.split(' - Reason: ')[1] || 'No reason provided' : 'No reason provided'}</p>
+                <p><strong>Originally Created by:</strong> ${ticket.created_by_name || "Unknown"}</p>
+              </div>
+            `;
+          } else if (status === 'closed') {
+            // Show transfer info if ticket was transferred before closing
+            if (ticket.transferred_by_name && ticket.transferred_at) {
+              const transferDate = new Date(ticket.transferred_at).toLocaleString(undefined, {
+                year: 'numeric', month: 'short', day: 'numeric',
+                hour: '2-digit', minute: '2-digit', hour12: true
+              });
+              
+              ticketHTML += `
+                <div class="transfer-info" style="padding: 8px; border-radius: 4px; margin-top: 8px;">
+                  <p><strong>Transfer Information:</strong></p>
+                  <p><strong>Transferred by:</strong> ${ticket.transferred_by_name}</p>
+                  <p><strong>Transfer Date:</strong> ${transferDate}</p>
+                  <p><strong>Transfer Reason:</strong> ${ticket.transfer_notes ? ticket.transfer_notes.split(' - Reason: ')[1] || 'No reason provided' : 'No reason provided'}</p>
+                </div>
+              `;
+            }
+          }
+
+          ticketHTML += `</div>`;
+          li.innerHTML = ticketHTML;
+
+          // Add action buttons for assigned tickets
+          if (status === 'assigned') {
+            const actionButtons = document.createElement('div');
+            actionButtons.className = 'action-buttons';
+
+            const btnInProgress = document.createElement('button');
+            btnInProgress.className = 'btn btn-progress';
+            btnInProgress.innerHTML = '<i class="fas fa-clock"></i> In-Progress';
+            btnInProgress.addEventListener('click', () => markInProgress(ticket.ticket_id));
+
+            const btnTransfer = document.createElement('button');
+            btnTransfer.className = 'btn btn-transfer';
+            btnTransfer.innerHTML = '<i class="fas fa-exchange-alt"></i> Transfer';
+            btnTransfer.addEventListener('click', () => openTransferModal(ticket.ticket_id));
+
+            const btnClosed = document.createElement('button');
+            btnClosed.className = 'btn btn-close';
+            btnClosed.innerHTML = '<i class="fas fa-check"></i> Close';
+            btnClosed.addEventListener('click', () => markAsClosed(ticket.ticket_id));
+
+            actionButtons.appendChild(btnInProgress);
+            actionButtons.appendChild(btnTransfer);
+            actionButtons.appendChild(btnClosed);
+            
+            // Find the ticket-body div and append the action buttons
+            const ticketBody = li.querySelector('.ticket-body');
+            if (ticketBody) {
+              ticketBody.appendChild(actionButtons);
+            }
+          }
+
+          list.appendChild(li);
+        });
+      } catch (err) {
+        list.innerHTML = `<li class="error-message">${errorMessages[status]}</li>`;
+        console.error(`Error loading ${status} tickets:`, err);
+      }
+    }
+
+    // New function to view transfer history
+    async function viewTransferHistory(ticketId) {
+      const modal = document.getElementById('transferHistoryModal');
+      const content = document.getElementById('transferHistoryContent');
+      
+      modal.style.display = 'block';
+      content.innerHTML = 'Loading transfer history...';
+      
+      try {
+        const response = await fetch(`/api/tickets/${ticketId}/transfer_history`);
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const result = await response.json();
+        const history = result.transfer_history || [];
+        
+        if (history.length === 0) {
+          content.innerHTML = '<p>No transfer history found for this ticket.</p>';
+          return;
+        }
+        
+        let historyHTML = '<div class="transfer-history-list">';
+        history.forEach(entry => {
+          const transferDate = new Date(entry.performed_at).toLocaleString(undefined, {
+            year: 'numeric', month: 'short', day: 'numeric',
+            hour: '2-digit', minute: '2-digit', hour12: true
+          });
+          
+          historyHTML += `
+            <div class="history-entry" style="border-bottom: 1px solid #eee; padding: 10px 0;">
+              <p><strong>Date:</strong> ${transferDate}</p>
+              <p><strong>Performed by:</strong> ${entry.performed_by} (${entry.performed_by_role})</p>
+              <p><strong>Transfer Reason:</strong> ${entry.notes || 'No reason provided'}</p>
+            </div>
+          `;
+        });
+        historyHTML += '</div>';
+        
+        content.innerHTML = historyHTML;
+      } catch (error) {
+        console.error('Error loading transfer history:', error);
+        content.innerHTML = '<p>Error loading transfer history. Please try again.</p>';
+      }
+    }
+
+    // Function to close transfer history modal
+    function closeTransferHistoryModal() {
+      document.getElementById('transferHistoryModal').style.display = 'none';
+    }
+
+    async function markAsClosed(ticketId) {
+      const response = await fetch(`/mark_closed/${ticketId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (response.ok) {
+        alert('Ticket closed successfully.');
+        loadTickets('assigned');
+        loadTickets('closed');
+      } else {
+        alert('Failed to close ticket.');
+      }
+    }
+
+    // Unified function to update ticket status by ticket id
+    async function updateTicketStatus(ticket_id, newStatus) {
+      if (!ticket_id) {
+        alert('Ticket ID is undefined.');
+        console.error('updateTicketStatus called with undefined ticket id');
+        return false;
+      }
+      try {
+        const response = await fetch(`/api/tickets/${ticket_id}/status`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ status: newStatus })
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          alert(`Failed to update status: ${errorData.message || response.statusText}`);
+          console.error('Failed to update status:', errorData.message || response.statusText);
+          return false;
+        }
+        return true; // success
+      } catch (error) {
+        alert('Error updating ticket status: ' + error.message);
+        console.error('Error updating ticket status:', error);
+        return false;
+      }
+    }
+
+    // Mark a ticket as 'attending' and refresh assigned and submitted tabs
+    async function markInProgress(ticket_id) {
+      if (!ticket_id) return alert('Ticket ID missing for marking as transferred.');
+      const success = await updateTicketStatus(ticket_id, 'in-progress');
+      if (success) {
+        loadTickets('assigned');
+        loadTickets('submitted');
+      }
+    }
+
+    // Open transfer modal and set current ticket id
+    function openTransferModal(ticket_id) {
+      if (!ticket_id) {
+        alert('No ticket selected to transfer.');
+        return;
+      }
+      currentTransferTicketId = ticket_id;
+      const modal = document.getElementById('transferModal');
+      modal.style.display = 'block';
+      document.body.style.overflow = 'hidden'; // Prevent background scrolling
+    }   
+
+    // Close transfer modal and reset fields
+    function closeTransferModal() {
+      const modal = document.getElementById('transferModal');
+      modal.style.display = 'none';
+      document.body.style.overflow = ''; // Restore scrolling
+      document.getElementById('assigneeSelect').value = '';
+      document.getElementById('transferReason').value = '';
+      currentTransferTicketId = null;
+    }
+
+    // Close modal when clicking outside
+    window.onclick = function(event) {
+      const modal = document.getElementById('transferModal');
+      if (event.target === modal) {
+        closeTransferModal();
+      }
+    }
+
+    // Handle transfer form submission
+    document.getElementById('transferForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const assignee = document.getElementById('assigneeSelect').value;
+      const reason = document.getElementById('transferReason').value.trim();
+      
+      if (!assignee) {
+        alert('Please select an assignee.');
+        return;
+      }
+      if (!reason) {
+        alert('Please provide a reason for transfer.');
+        return;
+      }
+      if (!currentTransferTicketId) {
+        alert('No ticket selected for transfer.');
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/tickets/${currentTransferTicketId}/transfer`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            assignee_id: assignee,
+            reason: reason
+          }),
+        });
+
+        if (!res.ok) {
+          const errData = await res.json();
+          alert(`Failed to transfer ticket: ${errData.error || res.statusText}`);
+          console.error('Transfer error:', errData);
+          return;
+        }
+
+        const result = await res.json();
+        showFlashMessage('Ticket transferred successfully.', 'success');
+        closeTransferModal();
+        loadTickets('assigned');
+        loadTickets('transferred');
+      } catch (error) {
+        console.error('Error during ticket transfer:', error);
+        showFlashMessage('An error occurred while transferring the ticket.', 'error');
+      }
+    });
+
+    document.addEventListener('DOMContentLoaded', function() {
+      const accountNumberInput = document.getElementById('account_number');
+      const submitButton = document.querySelector('button[type="submit"]');
+      
+      if (accountNumberInput) {
+          // Create error message element
+          const errorDiv = document.createElement('div');
+          errorDiv.className = 'error-message';
+          errorDiv.style.color = 'red';
+          errorDiv.style.fontSize = '0.875rem';
+          errorDiv.style.marginTop = '0.25rem';
+          errorDiv.style.display = 'none';
+          accountNumberInput.parentNode.insertBefore(errorDiv, accountNumberInput.nextSibling);
+
+          // Validation function
+          function validateAccountNumber() {
+              const value = accountNumberInput.value.trim();
+              let isValid = true;
+              let errorMessage = '';
+
+              if (value === '') {
+                  errorMessage = 'Account number is required.';
+                  isValid = false;
+              } else if (!/^\d+$/.test(value)) {
+                  errorMessage = 'Account number must contain only numbers.';
+                  isValid = false;
+              } else if (value.length < 3 || value.length > 15) {
+                  errorMessage = 'Account number must be between 3 and 15 digits long.';
+                  isValid = false;
+              }
+
+              // Show/hide error message
+              if (!isValid) {
+                  errorDiv.textContent = errorMessage;
+                  errorDiv.style.display = 'block';
+                  accountNumberInput.style.borderColor = 'red';
+              } else {
+                  errorDiv.style.display = 'none';
+                  accountNumberInput.style.borderColor = '';
+              }
+
+              return isValid;
+          }
+
+          // Validate on input (real-time)
+          accountNumberInput.addEventListener('input', function() {
+              validateAccountNumber();
+          });
+
+          // Validate on blur (when user leaves field)
+          accountNumberInput.addEventListener('blur', function() {
+              validateAccountNumber();
+          });
+
+          // Prevent form submission if validation fails
+          const form = accountNumberInput.closest('form');
+          if (form) {
+              form.addEventListener('submit', function(e) {
+                  if (!validateAccountNumber()) {
+                      e.preventDefault();
+                      accountNumberInput.focus();
+                      return false;
+                  }
+              });
+          }
+      }
+    });
+
+    // Optional: Function to show flash messages dynamically (if you want to show them without page reload)
+    function showFlashMessage(message, type) {
+        const flashContainer = document.getElementById('flash-messages');
+        if (flashContainer) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type === 'error' ? 'danger' : 'success'}`;
+            alertDiv.textContent = message;
+            
+            // Auto-dismiss after 5 seconds
+            setTimeout(() => {
+                alertDiv.remove();
+            }, 5000);
+            
+            flashContainer.appendChild(alertDiv);
+        }
+    }
+
+    // Logout function
+    function logoutUser() {
+      fetch('/logout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        credentials: 'same-origin'
+      })
+      .then(response => {
+        if (response.redirected) {
+          window.location.href = response.url;
+        } else if (response.ok) {
+          window.location.href = '/login';
+        } else {
+          alert('Logout failed.');
+        }
+      })
+      .catch(error => {
+        console.error('Logout error:', error);
+        alert('An error occurred during logout.');
+      });
+    }
+
+    // Auto-refresh functionality removed to prevent flickering
+    // If you need to refresh data, users can manually switch tabs or refresh the page
+
+    // Theme toggle functionality
+    function toggleTheme() {
+      const body = document.body;
+      const themeToggle = document.querySelector('.theme-toggle i');
+      
+      if (body.getAttribute('data-theme') === 'dark') {
+        body.removeAttribute('data-theme');
+        themeToggle.classList.remove('fa-sun');
+        themeToggle.classList.add('fa-moon');
+        localStorage.setItem('theme', 'light');
+      } else {
+        body.setAttribute('data-theme', 'dark');
+        themeToggle.classList.remove('fa-moon');
+        themeToggle.classList.add('fa-sun');
+        localStorage.setItem('theme', 'dark');
+      }
+    }
+
+    // Check for saved theme preference
+    document.addEventListener('DOMContentLoaded', () => {
+      const savedTheme = localStorage.getItem('theme');
+      const themeToggle = document.querySelector('.theme-toggle i');
+      
+      if (savedTheme === 'dark') {
+        document.body.setAttribute('data-theme', 'dark');
+        themeToggle.classList.remove('fa-moon');
+        themeToggle.classList.add('fa-sun');
+      }
+      
+      // Start auto-dismiss for flash messages
+      autoDismissFlash();
+    });
+
+    // Flash message auto-dismiss functionality
+    function dismissFlash(element) {
+      element.style.opacity = '0';
+      setTimeout(() => {
+        element.remove();
+      }, 300);
+    }
+
+    function autoDismissFlash() {
+      const flashMessages = document.querySelectorAll('.flash-message');
+      flashMessages.forEach(message => {
+        const category = message.dataset.category;
+        let timeout = 3000; 
+        
+        // Different timeouts for different message types
+        if (category === 'error') {
+          timeout = 8000; // Errors stay longer
+        } else if (category === 'success') {
+          timeout = 4000; // Success messages disappear faster
+        }
+        
+        setTimeout(() => {
+          if (message.parentElement) {
+            dismissFlash(message);
+          }
+        }, timeout);
+      });
+    }
+
+    // Notification System Functions
+    let notificationsLoaded = false;
+    let notificationCount = 0;
+
+    // Toggle notification dropdown
+    function toggleNotifications() {
+      const dropdown = document.getElementById('notificationDropdown');
+      const isVisible = dropdown.classList.contains('show');
+      if (!isVisible && !notificationsLoaded) {
+        loadNotifications();
+      }
+      dropdown.classList.toggle('show');
+      if (!isVisible) {
+        // Mark announcements as read
+        fetch('/api/user/mark_announcements_read', { method: 'POST' })
+          .then(() => updateNotificationBadgeFromServer());
+      }
+    }
+
+    // Load notifications from API
+    async function loadNotifications() {
+      const notificationList = document.getElementById('notificationList');
+      notificationList.innerHTML = '<div class="loading-notifications">Loading notifications...</div>';
+      
+      try {
+        const response = await fetch('/api/user/announcements');
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        const announcements = data.announcements || [];
+        
+        displayNotifications(announcements);
+        updateNotificationBadge(announcements.length);
+        notificationsLoaded = true;
+        
+      } catch (error) {
+        console.error('Error loading notifications:', error);
+        notificationList.innerHTML = '<div class="no-notifications">Error loading notifications</div>';
+      }
+    }
+
+    // Display notifications in the dropdown
+    function displayNotifications(announcements) {
+      const notificationList = document.getElementById('notificationList');
+      
+      if (announcements.length === 0) {
+        notificationList.innerHTML = '<div class="no-notifications">No notifications</div>';
+        return;
+      }
+      
+      let notificationsHTML = '';
+      announcements.forEach(announcement => {
+        const createdDate = new Date(announcement.created_at).toLocaleString(undefined, {
+          year: 'numeric', month: 'short', day: 'numeric',
+          hour: '2-digit', minute: '2-digit', hour12: true
+        });
+        
+        notificationsHTML += `
+          <div class="notification-item" onclick="viewNotification(${announcement.announcement_id})">
+            <div class="notification-title">${announcement.title}</div>
+            <div class="notification-content">${announcement.content}</div>
+            <div class="notification-meta">
+              <span>${createdDate}</span>
+            </div>
+          </div>
+        `;
+      });
+      
+      notificationList.innerHTML = notificationsHTML;
+    }
+
+    // Update notification badge
+    function updateNotificationBadge(count) {
+      const badge = document.getElementById('notificationBadge');
+      notificationCount = count;
+      
+      if (count > 0) {
+        badge.textContent = count > 99 ? '99+' : count;
+        badge.style.display = 'block';
+      } else {
+        badge.style.display = 'none';
+      }
+    }
+
+    // Hide notification badge
+    function hideNotificationBadge() {
+      const badge = document.getElementById('notificationBadge');
+      badge.style.display = 'none';
+      notificationCount = 0;
+    }
+
+    // View notification details (can be expanded later)
+    function viewNotification(announcementId) {
+      // Hide the notification badge when a notification is viewed
+      hideNotificationBadge();
+      // Close the dropdown
+      toggleNotifications();
+    }
+
+    // Close notifications when clicking outside
+    document.addEventListener('click', function(event) {
+      const notificationContainer = document.querySelector('.notification-container');
+      const dropdown = document.getElementById('notificationDropdown');
+      
+      if (!notificationContainer.contains(event.target) && dropdown.classList.contains('show')) {
+        dropdown.classList.remove('show');
+      }
+    });
+
+    // Load notifications on page load
+    document.addEventListener('DOMContentLoaded', () => {
+      // Load notifications after a short delay to ensure page is ready
+      setTimeout(() => {
+        loadNotifications();
+      }, 1000);
+    });
+
+    // Call this on page load and after viewing notifications
+    async function updateNotificationBadgeFromServer() {
+      try {
+        const response = await fetch('/api/user/unread_announcements_count');
+        if (!response.ok) throw new Error('Failed to fetch unread count');
+        const data = await response.json();
+        const count = data.unread_count || 0;
+        const badge = document.getElementById('notificationBadge');
+        if (count > 0) {
+          badge.textContent = count > 99 ? '99+' : count;
+          badge.style.display = 'block';
+        } else {
+          badge.style.display = 'none';
+        }
+      } catch (e) {
+        console.error('Error updating notification badge:', e);
+      }
+    }
+
+    // Call this on page load
+    document.addEventListener('DOMContentLoaded', () => {
+      setTimeout(() => {
+        updateNotificationBadgeFromServer();
+      }, 1000);
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+# Database settings (keep your existing ones)
+DB_NAME=BCM_Ticket_tracker
+DB_USER=postgres
+DB_PASSWORD=123
+DB_HOST=localhost
+DB_PORT=5432
+
+# Flask secret key
+FLASK_SECRET_KEY=your_secret_key_here
+
+# Email settings - START WITH THESE DISABLED FOR TESTING
+EMAIL_ENABLED=false
+SMTP_SERVER=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USERNAME=your_email@gmail.com
+SMTP_PASSWORD=your_app_password
+EMAIL_FROM=your_email@gmail.com
+
+# Flask Configuration
+FLASK_SECRET_KEY=your_secure_secret_key_here
+
+# Optional: Database URL (alternative to individual parameters)
+# DATABASE_URL=postgresql://username:password@localhost:5432/database_name 
