@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, redirect, session, jsonify, url_for, flash, Response, send_from_directory
-import psycopg
-from psycopg import sql
-from psycopg import IsolationLevel
+import psycopg2
+from psycopg2 import sql
+from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 from datetime import datetime, timedelta
 from functools import wraps
 import bcrypt
@@ -65,8 +65,8 @@ def initialize_database():
     dbname = DB_NAME
 
     try:
-        conn = psycopg.connect(dbname='postgres', user=DB_USER, password=DB_PASSWORD, host=DB_HOST, port=DB_PORT)
-        conn.autocommit = True
+        conn = psycopg2.connect(dbname='postgres', user=DB_USER, password=DB_PASSWORD, host=DB_HOST, port=DB_PORT)
+        conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         cur = conn.cursor()
 
         cur.execute("SELECT 1 FROM pg_database WHERE datname = %s", (dbname,))
@@ -486,7 +486,7 @@ def initialize_database():
 # --- DB Connection Helper ---
 def get_db_connection():
     try:
-        conn = psycopg.connect(TARGET_CONN_STR)
+        conn = psycopg2.connect(TARGET_CONN_STR)
         # print("DB connection successful.")
         return conn
     except Exception as e:
@@ -1031,7 +1031,7 @@ def register():
             flash('Registration successful! Please log in.', 'success')
             return redirect(url_for('login'))
             
-        except psycopg.IntegrityError:
+        except psycopg2.IntegrityError:
             flash('Registration failed. Email may already exist.', 'error')
             print("DB error during registration: Email already exists")
             return redirect(url_for('register'))
@@ -3638,7 +3638,7 @@ def create_simple_backup(backup_path, database, username, password, host, port):
     """Create a simple backup using Python when pg_dump is not available"""
     try:
         # Connect to database
-        conn = psycopg.connect(
+        conn = psycopg2.connect(
             dbname=database,
             user=username,
             password=password,
