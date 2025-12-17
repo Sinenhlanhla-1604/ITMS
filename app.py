@@ -798,7 +798,7 @@ Action: {action.title()}
 Please log into the system to view more details.
 
 Best regards,
-TTAH Support Team
+Flow4Ops Support Team
 """
     
     return send_email(recipient_email, subject, body)
@@ -921,10 +921,10 @@ Ticket Details:
 Description:
 {ticket_data.get('description', 'N/A')}
 
-Please log into TTAH to view full details and take any necessary action.
+Please log into Flow4Ops to view full details and take any necessary action.
 
 Best regards,
-TTAH Support Team
+Flow4Ops Support Team
 """
     
     return send_email(recipient_email, subject, body)
@@ -934,7 +934,7 @@ TTAH Support Team
 def send_password_reset_email(email, name, reset_token):
     """Send password reset email"""
     try:
-        subject = "Password Reset Request - TTAH"
+        subject = "Password Reset Request - Flow4Ops"
         
         # Create reset URL (adjust domain as needed)
         reset_url = url_for('reset_password', token=reset_token, _external=True)
@@ -942,7 +942,7 @@ def send_password_reset_email(email, name, reset_token):
         # Create text body
         body = f"""Dear {name},
 
-You have requested to reset your password for your TTAH account.
+You have requested to reset your password for your Flow4Ops account.
 
 Please click the following link to reset your password:
 {reset_url}
@@ -952,7 +952,7 @@ This link will expire in 1 hour for security reasons.
 If you did not request this password reset, please ignore this email.
 
 Best regards,
-TTAH Support Team
+Flow4Ops Support Team
 """
 
         # Create HTML body
@@ -986,7 +986,7 @@ TTAH Support Team
         <div class="content">
             <p>Dear {name},</p>
             
-            <p>You have requested to reset your password for your TTAH account.</p>
+            <p>You have requested to reset your password for your Flow4Ops account.</p>
             
             <p>Please click the button below to reset your password:</p>
             
@@ -1002,7 +1002,7 @@ TTAH Support Team
             <p>If you did not request this password reset, please ignore this email.</p>
         </div>
         <div class="footer">
-            <p>Best regards,<br>TTAH Support Team</p>
+            <p>Best regards,<br>Flow4Ops Support Team</p>
         </div>
     </div>
 </body>
