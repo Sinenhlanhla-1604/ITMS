@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>TTAH - User Dashboard</title>
+  <title>Dashboard - Flow4Ops</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/styles/user-style.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
   <style>
     .logo {
-      width: 60px; /* A bit smaller for the nav bar */
+      width: 60px;
       height: auto;
       vertical-align: middle;
       margin-right: 10px;
@@ -188,7 +188,7 @@
     }
 
     .ticket-info-item a {
-      background: #007bff;
+      background: #10b981;
       color: #fff !important;
       padding: 3px 10px;
       border-radius: 4px;
@@ -197,7 +197,7 @@
       transition: background 0.2s;
     }
     .ticket-info-item a:hover {
-      background: #d35400;
+      background: #059669;
       color: #fff !important;
     }
 
@@ -221,15 +221,15 @@
   <!-- Top Navigation Bar -->
   <nav class="top-nav">
     <div class="system-name">
-      <img src="{{ url_for('static', filename='img/ttah_logo.png') }}" alt="TTAH Logo" class="logo">
-      <span>Ticket Tracking and Analysis Hub</span>
+      <img src="{{ url_for('static', filename='img/ttah_logo.png') }}" alt="Flow4Ops Logo" class="logo">
+      <span>Flow4Ops</span>
       {% if org_name %}
       <span style="font-size: 0.8rem; opacity: 0.8; margin-left: 0.5rem;">| {{ org_name }}</span>
       {% endif %}
     </div>
     <div class="user-profile">
       <span>{{ name }}</span>
-      <img src="https://ui-avatars.com/api/?name={{ name }}&background=2c5282&color=fff" alt="Profile" />
+      <img src="https://ui-avatars.com/api/?name={{ name }}&background=10b981&color=fff" alt="Profile" />
       <div class="nav-controls">
         <button class="theme-toggle" onclick="toggleTheme()" title="Toggle dark/light mode">
           <i class="fas fa-moon"></i>
@@ -263,7 +263,7 @@
     <div class="welcome-section">
       <div>
         <h1>Welcome {{ name }}!</h1>
-        <p class="region-info"><i class="fas fa-map-marker-alt"></i> You are in the <strong>{{ region }}</strong> region.</p>
+        <p class="region-info"><i class="fas fa-building"></i> Department: <strong>{{ region }}</strong></p>
       </div>
     </div>
 
@@ -284,13 +284,13 @@
     <!-- Tabs Navigation -->
     <div class="tabs">
       <button class="tab-button active" onclick="showTab('logTicket', event)">
-        <i class="fas fa-plus-circle"></i> Log Ticket
+        <i class="fas fa-plus-circle"></i> Create Commitment
       </button>
       <button class="tab-button" onclick="showTab('submitted', event)">
-        <i class="fas fa-paper-plane"></i> Submitted
+        <i class="fas fa-paper-plane"></i> My Commitments
       </button>
       <button class="tab-button" onclick="showTab('closed', event)">
-        <i class="fas fa-check-circle"></i> Closed
+        <i class="fas fa-check-circle"></i> Completed
       </button>
     </div>
 
@@ -298,102 +298,102 @@
     <div id="logTicket" class="tab-content active">
       <div class="form-container">
         <div class="form-header">
-          <h2><i class="fas fa-plus-circle"></i> Log a New Ticket</h2>
+          <h2><i class="fas fa-plus-circle"></i> Create New Commitment</h2>
           
-          <!-- Ticket Type Toggle -->
+          <!-- Commitment Type Toggle -->
           <div class="ticket-type-toggle">
-            <div class="toggle-option active" onclick="switchTicketType('meter')" id="meterToggle">
-              <i class="fas fa-tachometer-alt"></i>
-              <div class="option-title">Meter Issue</div>
-              <div class="option-description">Electricity meters, billing, connections</div>
+            <div class="toggle-option active" onclick="switchTicketType('asset')" id="assetToggle">
+              <i class="fas fa-tools"></i>
+              <div class="option-title">Asset/Equipment</div>
+              <div class="option-description">Equipment, infrastructure, asset issues</div>
             </div>
             <div class="toggle-option" onclick="switchTicketType('general')" id="generalToggle">
-              <i class="fas fa-tools"></i>
-              <div class="option-title">General Issue</div>
+              <i class="fas fa-inbox"></i>
+              <div class="option-title">General</div>
               <div class="option-description">Maintenance, complaints, services</div>
             </div>
           </div>
         </div>
     
         <form id="ticketForm" method="POST" action="{{ url_for('submit_ticket') }}" enctype="multipart/form-data">
-          <!-- Hidden field to track ticket type -->
+          <!-- Hidden field to track commitment type -->
           <input type="hidden" id="ticketType" name="ticket_type" value="meter">
     
-          <!-- Meter Ticket Section -->
-          <div id="meterSection" class="form-section active">
+          <!-- Asset Commitment Section -->
+          <div id="assetSection" class="form-section active">
             <div class="info-box">
               <i class="fas fa-info-circle"></i>
-              <strong>Meter tickets:</strong> For electricity meter issues, billing problems, or connection troubles.
+              <strong>Asset commitments:</strong> For issues related to equipment, assets, or infrastructure that require tracking and accountability.
             </div>
             
             <div class="form-grid">
               <div class="form-group">
-                <label for="meterTitle" class="required">Title</label>
-                <input type="text" id="meterTitle" name="title" required placeholder="Enter ticket title" />
-                <div class="helper-text">Brief description of the meter issue</div>
+                <label for="assetTitle" class="required">Title</label>
+                <input type="text" id="assetTitle" name="title" required placeholder="Brief description of the issue" />
+                <div class="helper-text">Short summary of the commitment</div>
               </div>
     
               <div class="form-group">
-                <label for="accountNumber" class="required">Account Number</label>
+                <label for="accountNumber" class="required">External Reference</label>
                 <input type="text" 
                        id="accountNumber" 
                        name="account_number" 
                        required 
-                       pattern="[0-9]{3,15}"
-                       placeholder="Enter numeric account number" />
-                <div class="helper-text">Must be 3-15 digits</div>
+                       pattern="[0-9A-Za-z-]{3,15}"
+                       placeholder="External tracking number" />
+                <div class="helper-text">External system reference (3-15 characters)</div>
               </div>
     
               <div class="form-group">
-                <label for="meterNumber" class="required">Meter Number</label>
+                <label for="assetReference" class="required">Reference ID</label>
                 <input type="text" 
-                       id="meterNumber" 
+                       id="assetReference" 
                        name="meter_number" 
                        required 
-                       placeholder="Enter meter number" />
-                <div class="helper-text">Meter number from your account</div>
+                       placeholder="Asset or equipment reference" />
+                <div class="helper-text">Asset tag, equipment ID, or location reference</div>
               </div>
     
               <div class="form-group">
-                <label for="meterAssignedTo" class="required">Assign To</label>
-                <select id="meterAssignedTo" name="assigned_to" required>
-                  <option value="">Select Assignee</option>
+                <label for="assetAssignedTo" class="required">Assign Owner</label>
+                <select id="assetAssignedTo" name="assigned_to" required>
+                  <option value="">Select Owner</option>
                   {% for assignee in assignees %}
                     <option value="{{ assignee[0] }}">{{ assignee[1] }} {{ assignee[2] }}</option>
                   {% endfor %}
                 </select>
-                <div class="helper-text">Who should handle this meter issue</div>
+                <div class="helper-text">Who will own this commitment</div>
               </div>
     
               <div class="form-group full-width">
-                <label for="meterDescription" class="required">Description</label>
-                <textarea id="meterDescription" 
+                <label for="assetDescription" class="required">Description</label>
+                <textarea id="assetDescription" 
                           name="description" 
                           required 
-                          placeholder="Describe the meter problem in detail..."></textarea>
-                <div class="helper-text">Include meter readings, error codes, or unusual behavior</div>
+                          placeholder="Describe the issue and what needs to be done..."></textarea>
+                <div class="helper-text">Include specific details to help resolve this commitment</div>
               </div>
     
               <div class="form-group full-width">
-                <label for="meterAttachment">Attachment (optional)</label>
-                <input type="file" id="meterAttachment" name="attachment" accept=".jpg,.jpeg,.png,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip,.rar,.csv" />
-                <div class="helper-text">Photos of meter, bills, or documents (max 10MB)</div>
+                <label for="assetAttachment">Attachment (optional)</label>
+                <input type="file" id="assetAttachment" name="attachment" accept=".jpg,.jpeg,.png,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip,.rar,.csv" />
+                <div class="helper-text">Photos, diagrams, or documents (max 10MB)</div>
               </div>
             </div>
           </div>
     
-          <!-- General Ticket Section -->
+          <!-- General Commitment Section -->
           <div id="generalSection" class="form-section">
             <div class="info-box">
               <i class="fas fa-info-circle"></i>
-              <strong>General tickets:</strong> For maintenance, complaints, service requests, or other issues.
+              <strong>General commitments:</strong> For maintenance, complaints, service requests, or other operational actions.
             </div>
             
             <div class="form-grid">
               <div class="form-group">
                 <label for="generalTitle" class="required">Title</label>
-                <input type="text" id="generalTitle" name="title" placeholder="Enter ticket title" />
-                <div class="helper-text">Brief description of the issue</div>
+                <input type="text" id="generalTitle" name="title" placeholder="Brief description" />
+                <div class="helper-text">Short summary of the commitment</div>
               </div>
     
               <div class="form-group">
@@ -405,32 +405,34 @@
                   <option value="service">Service Request</option>
                   <option value="infrastructure">Infrastructure Issue</option>
                   <option value="safety">Safety Concern</option>
-                  <option value="billing">Billing (Non-meter)</option>
+                  <option value="facilities">Facilities</option>
+                  <option value="it-support">IT Support</option>
+                  <option value="logistics">Logistics</option>
                   <option value="other">Other</option>
                 </select>
                 <div class="helper-text">Choose the most appropriate category</div>
               </div>
     
               <div class="form-group">
-                <label for="generalAssignedTo" class="required">Assign To</label>
+                <label for="generalAssignedTo" class="required">Assign Owner</label>
                 <select id="generalAssignedTo" name="assigned_to">
-                  <option value="">Select Assignee</option>
+                  <option value="">Select Owner</option>
                   {% for assignee in assignees %}
                     <option value="{{ assignee[0] }}">{{ assignee[1] }} {{ assignee[2] }}</option>
                   {% endfor %}
                 </select>
-                <div class="helper-text">Who should handle this request</div>
+                <div class="helper-text">Who will own this commitment</div>
               </div>
     
               <div class="form-group">
                 <label for="location">Location/Address</label>
-                <input type="text" id="location" name="location" placeholder="Enter specific location" />
+                <input type="text" id="location" name="location" placeholder="Specific location" />
                 <div class="helper-text">Where is the issue located? (if applicable)</div>
               </div>
     
               <div class="form-group">
                 <label for="contactInfo">Contact Information</label>
-                <input type="text" id="contactInfo" name="contact_info" placeholder="Phone or preferred contact" />
+                <input type="text" id="contactInfo" name="contact_info" placeholder="Phone or email" />
                 <div class="helper-text">How should we reach you for updates?</div>
               </div>
     
@@ -438,8 +440,8 @@
                 <label for="generalDescription" class="required">Description</label>
                 <textarea id="generalDescription" 
                           name="description" 
-                          placeholder="Provide detailed information about the issue..."></textarea>
-                <div class="helper-text">Include relevant details to help resolve the issue</div>
+                          placeholder="Provide detailed information..."></textarea>
+                <div class="helper-text">Include relevant details to help complete this commitment</div>
               </div>
     
               <div class="form-group full-width">
@@ -457,7 +459,7 @@
             </button>
             <button type="submit" class="btn btn-primary">
               <i class="fas fa-paper-plane"></i>
-              Submit Ticket
+              Create Commitment
             </button>
           </div>
         </form>
@@ -467,13 +469,13 @@
 
     <!-- Submitted Tab -->
     <div id="submitted" class="tab-content">
-      <h2><i class="fas fa-paper-plane"></i> Submitted Tickets</h2>
+      <h2><i class="fas fa-paper-plane"></i> My Commitments</h2>
       <ul id="submittedTicketsList" class="ticket-list"></ul>
     </div>
 
     <!-- Closed Tab -->
     <div id="closed" class="tab-content">
-      <h2><i class="fas fa-check-circle"></i> Closed Tickets</h2>
+      <h2><i class="fas fa-check-circle"></i> Completed Commitments</h2>
       <ul id="closedTicketsList" class="ticket-list"></ul>
     </div>
   </div>
@@ -482,42 +484,36 @@
   <div id="transferHistoryModal" class="modal">
     <div class="modal-content">
       <span class="close" onclick="closeTransferHistoryModal()">&times;</span>
-      <h3>Transfer History</h3>
+      <h3>Reassignment History</h3>
       <div id="transferHistoryContent">Loading...</div>
     </div>
   </div>
 
   <script>
     function showTab(tabId, evt) {
-      // Hide all tab contents
       document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-      // Remove active class from all tab buttons
       document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
 
-      // Show selected tab content
       const selectedTab = document.getElementById(tabId);
       if (selectedTab) {
         selectedTab.classList.add('active');
       }
 
-      // Set active class on clicked tab button
       if (evt && evt.currentTarget) {
         evt.currentTarget.classList.add('active');
       }
 
-      // Load tickets only for submitted and closed tabs
       if (tabId === 'submitted' || tabId === 'closed') {
         loadTickets();
       }
     }
 
-    // New function to view transfer history (same as assignee dashboard)
     async function viewTransferHistory(ticketId) {
       const modal = document.getElementById('transferHistoryModal');
       const content = document.getElementById('transferHistoryContent');
       
       modal.style.display = 'block';
-      content.innerHTML = 'Loading transfer history...';
+      content.innerHTML = 'Loading reassignment history...';
       
       try {
         const response = await fetch(`/api/tickets/${ticketId}/transfer_history`);
@@ -529,7 +525,7 @@
         const history = result.transfer_history || [];
         
         if (history.length === 0) {
-          content.innerHTML = '<p>No transfer history found for this ticket.</p>';
+          content.innerHTML = '<p>No reassignment history found for this commitment.</p>';
           return;
         }
         
@@ -543,8 +539,8 @@
           historyHTML += `
             <div class="history-entry" style="border-bottom: 1px solid #eee; padding: 10px 0;">
               <p><strong>Date:</strong> ${transferDate}</p>
-              <p><strong>Performed by:</strong> ${entry.performed_by} (${entry.performed_by_role})</p>
-              <p><strong>Transfer Reason:</strong> ${entry.notes || 'No reason provided'}</p>
+              <p><strong>Reassigned by:</strong> ${entry.performed_by} (${entry.performed_by_role})</p>
+              <p><strong>Reason:</strong> ${entry.notes || 'No reason provided'}</p>
             </div>
           `;
         });
@@ -552,25 +548,22 @@
         
         content.innerHTML = historyHTML;
       } catch (error) {
-        console.error('Error loading transfer history:', error);
-        content.innerHTML = '<p>Error loading transfer history. Please try again.</p>';
+        console.error('Error loading reassignment history:', error);
+        content.innerHTML = '<p>Error loading reassignment history. Please try again.</p>';
       }
     }
 
-    // Function to close transfer history modal
     function closeTransferHistoryModal() {
       document.getElementById('transferHistoryModal').style.display = 'none';
     }
 
-    // Updated loadTickets function with proper transfer information display
     async function loadTickets(status) {
       const submittedList = document.getElementById('submittedTicketsList');
       const closedList = document.getElementById('closedTicketsList');
 
-      // No-data messages for better user experience
       const noDataMessages = {
-        submitted: 'You have no submitted tickets at this time.',
-        closed: 'No closed tickets found in your history.'
+        submitted: 'You have no active commitments at this time.',
+        closed: 'No completed commitments found in your history.'
       };
 
       if (submittedList) submittedList.innerHTML = '<li>Loading...</li>';
@@ -581,14 +574,21 @@
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         const data = await response.json();
 
-        console.log('User tickets API response:', data); // Debug log
+        console.log('User commitments API response:', data);
 
-        // Clear lists before populating
         if (submittedList) submittedList.innerHTML = '';
         if (closedList) closedList.innerHTML = '';
 
         const createTicketHTML = (ticket) => {
           const rawStatus = ticket.status.toLowerCase().replace('-', ' ').trim();
+
+          const statusMap = {
+            'open': 'Pending',
+            'in progress': 'Active',
+            'in-progress': 'Active',
+            'transferred': 'Reassigned',
+            'closed': 'Completed'
+          };
 
           const statusClassMap = {
             'open': 'open',
@@ -598,6 +598,7 @@
             'closed': 'closed'
           };
 
+          const statusDisplay = statusMap[rawStatus] || ticket.status;
           const statusClass = statusClassMap[rawStatus] || 'open';
 
           const createdDate = new Date(ticket.created_at);
@@ -606,7 +607,6 @@
             hour: '2-digit', minute: '2-digit', hour12: true
           });
 
-          // Build transfer information if available (using correct API field names)
           let transferInfo = '';
           if (ticket.transferred_by_name && ticket.transferred_at) {
             const transferDate = new Date(ticket.transferred_at).toLocaleString(undefined, {
@@ -616,10 +616,10 @@
             
             transferInfo = `
               <div class="transfer-info">
-                <p><strong>Transfer Information:</strong></p>
-                <p><strong>Transferred by:</strong> ${ticket.transferred_by_name}</p>
-                <p><strong>Transfer Date:</strong> ${transferDate}</p>
-                <p><strong>Transfer Reason:</strong> ${ticket.transfer_notes ? ticket.transfer_notes.split(' - Reason: ')[1] || 'No reason provided' : 'No reason provided'}</p>
+                <p><strong>Reassignment Information:</strong></p>
+                <p><strong>Reassigned by:</strong> ${ticket.transferred_by_name}</p>
+                <p><strong>Reassignment Date:</strong> ${transferDate}</p>
+                <p><strong>Reason:</strong> ${ticket.transfer_notes ? ticket.transfer_notes.split(' - Reason: ')[1] || 'No reason provided' : 'No reason provided'}</p>
               </div>
             `;
           }
@@ -627,11 +627,11 @@
           let ticketInfoItems = `
             <div class="ticket-info-item">
               <i class="fas fa-hashtag"></i>
-              <strong>Meter number:</strong> ${ticket.meter_number}
+              <strong>Reference ID:</strong> ${ticket.meter_number}
             </div>
             <div class="ticket-info-item">
               <i class="fas fa-file-invoice"></i>
-              <strong>Account number:</strong> ${ticket.account_number}
+              <strong>External Ref:</strong> ${ticket.account_number}
             </div>
             <div class="ticket-info-item">
               <i class="fas fa-calendar"></i>
@@ -639,12 +639,12 @@
             </div>
             <div class="ticket-info-item">
               <i class="fas fa-user"></i>
-              <strong>Assigned to:</strong> ${ticket.assigned_to_name || 'Unassigned'}
+              <strong>Owner:</strong> ${ticket.assigned_to_name || 'Unassigned'}
             </div>
             ${ticket.resolved_at ? `
               <div class="ticket-info-item">
                 <i class="fas fa-check-circle"></i>
-                <strong>Resolved:</strong> ${new Date(ticket.resolved_at).toLocaleString(undefined, {
+                <strong>Completed:</strong> ${new Date(ticket.resolved_at).toLocaleString(undefined, {
                   year: 'numeric', month: 'short', day: 'numeric',
                   hour: '2-digit', minute: '2-digit', hour12: true
                 })}
@@ -665,11 +665,11 @@
             <li>
               <div class="ticket-card" data-status="${statusClass}">
                 <div class="ticket-header">
-                  <strong>Ticket #${ticket.ticket_id}: ${ticket.title}</strong>
-                  <span class="status ${statusClass}">${ticket.status}</span>
+                  <strong>Commitment #${ticket.ticket_id}: ${ticket.title}</strong>
+                  <span class="status ${statusClass}">${statusDisplay}</span>
                 </div>
                 <div class="ticket-body">
-                   <p> <i class="fas fa-note-sticky	"></i>
+                   <p><i class="fas fa-note-sticky"></i>
                   <strong>Description:</strong> ${ticket.description}</p>
                   <div class="ticket-info-line">
                     ${ticketInfoItems}
@@ -681,7 +681,6 @@
           `;
         };
 
-        // Populate Submitted Tickets with improved no-data handling
         if (submittedList) {
           if (data.in_progress_tickets && Array.isArray(data.in_progress_tickets) && data.in_progress_tickets.length > 0) {
             data.in_progress_tickets.forEach(ticket => {
@@ -692,25 +691,10 @@
           }
         }
 
-        // Populate Closed Tickets with improved no-data handling
         if (closedList) {
           if (data.closed_tickets && Array.isArray(data.closed_tickets) && data.closed_tickets.length > 0) {
             data.closed_tickets.forEach(ticket => {
-              // Add resolved date for closed tickets
-              let ticketHTML = createTicketHTML(ticket);
-              
-              // Add resolved date if available
-              if (ticket.resolved_at) {
-                const resolvedDate = new Date(ticket.resolved_at).toLocaleString(undefined, {
-                  year: 'numeric', month: 'short', day: 'numeric',
-                  hour: '2-digit', minute: '2-digit', hour12: true
-                });
-                
-                // Insert resolved date before closing divs
-               
-              }
-              
-              closedList.insertAdjacentHTML('beforeend', ticketHTML);
+              closedList.insertAdjacentHTML('beforeend', createTicketHTML(ticket));
             });
           } else {
             closedList.innerHTML = `<li class="no-data-message">${noDataMessages.closed}</li>`;
@@ -718,52 +702,43 @@
         }
 
       } catch (error) {
-        console.error('Error loading tickets:', error);
-        if (submittedList) submittedList.innerHTML = '<li class="error-message">Unable to load submitted tickets. Please check your connection and try again.</li>';
-        if (closedList) closedList.innerHTML = '<li class="error-message">Error loading closed tickets. The archived data may be temporarily inaccessible.</li>';
+        console.error('Error loading commitments:', error);
+        if (submittedList) submittedList.innerHTML = '<li class="error-message">Unable to load commitments. Please check your connection and try again.</li>';
+        if (closedList) closedList.innerHTML = '<li class="error-message">Error loading completed commitments.</li>';
       }
     }
     
-    // Add these functions to your existing <script> section in user_dashboard.html
-
 function switchTicketType(type) {
-  // Update toggle buttons
-  document.getElementById('meterToggle').classList.remove('active');
+  document.getElementById('assetToggle').classList.remove('active');
   document.getElementById('generalToggle').classList.remove('active');
   
-  if (type === 'meter') {
-    document.getElementById('meterToggle').classList.add('active');
-    document.getElementById('meterSection').classList.add('active');
+  if (type === 'asset') {
+    document.getElementById('assetToggle').classList.add('active');
+    document.getElementById('assetSection').classList.add('active');
     document.getElementById('generalSection').classList.remove('active');
     document.getElementById('ticketType').value = 'meter';
     
-    // Clear general form fields
     clearFormSection('general');
-    
-    // Set required fields for meter section
-    setRequiredFields('meter');
+    setRequiredFields('asset');
   } else {
     document.getElementById('generalToggle').classList.add('active');
     document.getElementById('generalSection').classList.add('active');
-    document.getElementById('meterSection').classList.remove('active');
+    document.getElementById('assetSection').classList.remove('active');
     document.getElementById('ticketType').value = 'general';
     
-    // Clear meter form fields
-    clearFormSection('meter');
-    
-    // Set required fields for general section
+    clearFormSection('asset');
     setRequiredFields('general');
   }
 }
 
   function clearFormSection(sectionType) {
-    if (sectionType === 'meter') {
-      document.getElementById('meterTitle').value = '';
+    if (sectionType === 'asset') {
+      document.getElementById('assetTitle').value = '';
       document.getElementById('accountNumber').value = '';
-      document.getElementById('meterNumber').value = '';
-      document.getElementById('meterAssignedTo').value = '';
-      document.getElementById('meterDescription').value = '';
-      document.getElementById('meterAttachment').value = '';
+      document.getElementById('assetReference').value = '';
+      document.getElementById('assetAssignedTo').value = '';
+      document.getElementById('assetDescription').value = '';
+      document.getElementById('assetAttachment').value = '';
     } else {
       document.getElementById('generalTitle').value = '';
       document.getElementById('category').value = '';
@@ -776,35 +751,32 @@ function switchTicketType(type) {
   }
 
   function setRequiredFields(sectionType) {
-    // Remove all required and disabled attributes first
     document.querySelectorAll('#ticketForm input, #ticketForm select, #ticketForm textarea').forEach(field => {
       field.removeAttribute('required');
       field.removeAttribute('disabled');
     });
 
-    if (sectionType === 'meter') {
-      // Enable meter fields, disable general fields
-      document.querySelectorAll('#meterSection input, #meterSection select, #meterSection textarea').forEach(field => {
+    if (sectionType === 'asset') {
+      document.querySelectorAll('#assetSection input, #assetSection select, #assetSection textarea').forEach(field => {
         field.removeAttribute('disabled');
       });
       document.querySelectorAll('#generalSection input, #generalSection select, #generalSection textarea').forEach(field => {
         field.setAttribute('disabled', 'disabled');
       });
-      // Set required for meter fields
-      document.getElementById('meterTitle').setAttribute('required', '');
+      
+      document.getElementById('assetTitle').setAttribute('required', '');
       document.getElementById('accountNumber').setAttribute('required', '');
-      document.getElementById('meterNumber').setAttribute('required', '');
-      document.getElementById('meterAssignedTo').setAttribute('required', '');
-      document.getElementById('meterDescription').setAttribute('required', '');
+      document.getElementById('assetReference').setAttribute('required', '');
+      document.getElementById('assetAssignedTo').setAttribute('required', '');
+      document.getElementById('assetDescription').setAttribute('required', '');
     } else {
-      // Enable general fields, disable meter fields
       document.querySelectorAll('#generalSection input, #generalSection select, #generalSection textarea').forEach(field => {
         field.removeAttribute('disabled');
       });
-      document.querySelectorAll('#meterSection input, #meterSection select, #meterSection textarea').forEach(field => {
+      document.querySelectorAll('#assetSection input, #assetSection select, #assetSection textarea').forEach(field => {
         field.setAttribute('disabled', 'disabled');
       });
-      // Set required for general fields
+      
       document.getElementById('generalTitle').setAttribute('required', '');
       document.getElementById('category').setAttribute('required', '');
       document.getElementById('generalAssignedTo').setAttribute('required', '');
@@ -813,15 +785,10 @@ function switchTicketType(type) {
   }
 
   function resetForm() {
-    // Reset to meter type by default
-    switchTicketType('meter');
-    
-    // Clear all form fields
+    switchTicketType('asset');
     document.getElementById('ticketForm').reset();
 }
 
-
-    // Logout function - Updated to handle both redirect and JSON responses
     function logoutUser() {
       fetch('/logout', {
         method: 'POST',
@@ -851,16 +818,13 @@ function switchTicketType(type) {
     }
     
     document.addEventListener('DOMContentLoaded', () => {
-      // First remove any existing active classes and hide all tabs
       document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
       document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
       
-      // Then show the Log Ticket tab and make its button active
       document.getElementById('logTicket').classList.add('active');
       document.querySelector('[onclick*="logTicket"]').classList.add('active');
     });
     
-    // Theme toggle functionality
     function toggleTheme() {
       const body = document.body;
       const themeToggle = document.querySelector('.theme-toggle i');
@@ -878,7 +842,6 @@ function switchTicketType(type) {
       }
     }
 
-    // Check for saved theme preference
     document.addEventListener('DOMContentLoaded', () => {
       const savedTheme = localStorage.getItem('theme');
       const themeToggle = document.querySelector('.theme-toggle i');
@@ -889,11 +852,9 @@ function switchTicketType(type) {
         themeToggle.classList.add('fa-sun');
       }
       
-      // Start auto-dismiss for flash messages
       autoDismissFlash();
     });
 
-    // Flash message auto-dismiss functionality
     function dismissFlash(element) {
       element.style.opacity = '0';
       setTimeout(() => {
@@ -906,11 +867,11 @@ function switchTicketType(type) {
       flashMessages.forEach(message => {
         const category = message.dataset.category;
         let timeout = 3000;
-        // Different timeouts for different message types
+        
         if (category === 'error') {
-          timeout = 8000; // Errors stay longer
+          timeout = 8000;
         } else if (category === 'success') {
-          timeout = 4000; // Success messages disappear faster
+          timeout = 4000;
         }
         
         setTimeout(() => {
@@ -925,7 +886,6 @@ function switchTicketType(type) {
     let notificationsLoaded = false;
     let notificationCount = 0;
 
-    // Toggle notification dropdown
     function toggleNotifications() {
       const dropdown = document.getElementById('notificationDropdown');
       const isVisible = dropdown.classList.contains('show');
@@ -934,13 +894,11 @@ function switchTicketType(type) {
       }
       dropdown.classList.toggle('show');
       if (!isVisible) {
-        // Mark announcements as read
         fetch('/api/user/mark_announcements_read', { method: 'POST' })
           .then(() => updateNotificationBadgeFromServer());
       }
     }
 
-    // Load notifications from API
     async function loadNotifications() {
       const notificationList = document.getElementById('notificationList');
       notificationList.innerHTML = '<div class="loading-notifications">Loading notifications...</div>';
@@ -964,7 +922,6 @@ function switchTicketType(type) {
       }
     }
 
-    // Display notifications in the dropdown
     function displayNotifications(announcements) {
       const notificationList = document.getElementById('notificationList');
       
@@ -994,7 +951,6 @@ function switchTicketType(type) {
       notificationList.innerHTML = notificationsHTML;
     }
 
-    // Update notification badge
     function updateNotificationBadge(count) {
       const badge = document.getElementById('notificationBadge');
       notificationCount = count;
@@ -1007,22 +963,17 @@ function switchTicketType(type) {
       }
     }
 
-    // Hide notification badge
     function hideNotificationBadge() {
       const badge = document.getElementById('notificationBadge');
       badge.style.display = 'none';
       notificationCount = 0;
     }
 
-    // View notification details (can be expanded later)
     function viewNotification(announcementId) {
-      // Hide the notification badge when a notification is viewed
       hideNotificationBadge();
-      // Close the dropdown
       toggleNotifications();
     }
 
-    // Close notifications when clicking outside
     document.addEventListener('click', function(event) {
       const notificationContainer = document.querySelector('.notification-container');
       const dropdown = document.getElementById('notificationDropdown');
@@ -1032,15 +983,12 @@ function switchTicketType(type) {
       }
     });
 
-    // Load notifications on page load
     document.addEventListener('DOMContentLoaded', () => {
-      // Load notifications after a short delay to ensure page is ready
       setTimeout(() => {
         loadNotifications();
       }, 1000);
     });
 
-    // Call this on page load and after viewing notifications
     async function updateNotificationBadgeFromServer() {
       try {
         const response = await fetch('/api/user/unread_announcements_count');
@@ -1059,7 +1007,6 @@ function switchTicketType(type) {
       }
     }
 
-    // Call this on page load
     document.addEventListener('DOMContentLoaded', () => {
       setTimeout(() => {
         updateNotificationBadgeFromServer();
@@ -1070,7 +1017,7 @@ function switchTicketType(type) {
   <!-- Footer -->
   <footer class="site-footer">
     <div class="footer-content">
-      <p>&copy; 2025 Ticket Tracking and Analysis Hub. All rights reserved.</p>
+      <p>&copy; 2025 Flow4Ops v1.0.0 • Powered by Flow4</p>
     </div>
   </footer>
 </body>
