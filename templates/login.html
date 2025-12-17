@@ -3,134 +3,20 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>TTAH - Login</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='styles/login.css') }}">
+  <title>Flow4Ops - Login</title>
+  
+  <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-  <style>
-    .logo {
-      width: 80px;
-      height: 80px;
-      margin: 0 12px 0 0;
-    }
-    .system-header {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .flash-messages {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      z-index: 9999;
-      max-width: 400px;
-      pointer-events: none;
-    }
-    
-    .flash-message {
-      padding: 16px 20px;
-      margin-bottom: 12px;
-      border-radius: 8px;
-      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.25);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      animation: slideIn 0.4s ease-out;
-      opacity: 1;
-      transition: all 0.3s ease-out;
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      pointer-events: auto;
-      font-weight: 500;
-      font-size: 14px;
-      line-height: 1.4;
-    }
-    
-    .flash-message.success {
-      background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
-      color: #155724;
-      border-left: 4px solid #28a745;
-      border-color: rgba(40, 167, 69, 0.3);
-    }
-    
-    .flash-message.error {
-      background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
-      color: #721c24;
-      border-left: 4px solid #dc3545;
-      border-color: rgba(220, 53, 69, 0.3);
-    }
-    
-    .flash-message.info {
-      background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
-      color: #0c5460;
-      border-left: 4px solid #17a2b8;
-      border-color: rgba(23, 162, 184, 0.3);
-    }
-    
-    .flash-message .close-btn {
-      background: none;
-      border: none;
-      font-size: 20px;
-      cursor: pointer;
-      color: inherit;
-      opacity: 0.7;
-      margin-left: 12px;
-      padding: 0;
-      width: 24px;
-      height: 24px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 50%;
-      transition: all 0.2s ease;
-    }
-    
-    .flash-message .close-btn:hover {
-      opacity: 1;
-      background-color: rgba(0, 0, 0, 0.1);
-      transform: scale(1.1);
-    }
-    
-    @keyframes slideIn {
-      from {
-        transform: translateX(100%) scale(0.95);
-        opacity: 0;
-      }
-      to {
-        transform: translateX(0) scale(1);
-        opacity: 1;
-      }
-    }
-    
-    .flash-message.fade-out {
-      opacity: 0;
-      transform: translateX(100%) scale(0.95);
-    }
-    
-    /* Dark theme support */
-    [data-theme="dark"] .flash-message.success {
-      background: linear-gradient(135deg, #1e4d2b 0%, #2d5a3d 100%);
-      color: #d4edda;
-      border-color: rgba(40, 167, 69, 0.5);
-    }
-    
-    [data-theme="dark"] .flash-message.error {
-      background: linear-gradient(135deg, #4d1e1e 0%, #5a2d2d 100%);
-      color: #f8d7da;
-      border-color: rgba(220, 53, 69, 0.5);
-    }
-    
-    [data-theme="dark"] .flash-message.info {
-      background: linear-gradient(135deg, #1e4d5a 0%, #2d5a6b 100%);
-      color: #d1ecf1;
-      border-color: rgba(23, 162, 184, 0.5);
-    }
-  </style>
+  
+  <!-- Updated Login CSS (this file has everything) -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles/login.css') }}">
 </head>
 <body>
-  <h1 class="system-header">
-    <span class="system-name"><img src="{{ url_for('static', filename='img/ttah_logo.png') }}" alt="TTAH Logo" class="logo"> Ticket Tracking and Analysis Hub</span>
-    
-  </h1>
+  <!-- Header -->
+  <div class="system-header">
+    <span>Flow4Ops</span>
+    <p class="tagline">Operational Accountability Platform</p>
+  </div>
 
   <!-- Flash Messages Container -->
   <div id="flash-messages" class="flash-messages">
@@ -146,31 +32,71 @@
     {% endwith %}
   </div>
 
+  <!-- Login Form -->
   <form action="{{ url_for('login') }}" method="POST">
+    <h2>
+      <i class="fas fa-user-circle"></i>
+      Login
+    </h2>
     
-
-    <h2><i class="fas fa-user-circle"></i> Login</h2>
+    <label for="email">
+      <i class="fas fa-envelope"></i>
+      Email
+    </label>
+    <input 
+      type="email" 
+      id="email" 
+      name="email" 
+      required 
+      placeholder="you@company.com" 
+      autocomplete="email"
+    />
     
-    <label for="email"><i class="fas fa-envelope"></i> Email</label>
-    <input type="email" id="email" name="email" required placeholder="Enter your email" />
-    <br>
-    <br>
-    <br>
-    <label for="password"><i class="fas fa-lock"></i> Password</label>
-    <input type="password" id="password" name="password" required autocomplete="current-password" placeholder="Enter your password" />
-    <button type="submit"><i class="fas fa-sign-in-alt"></i> Login</button>
+    <label for="password">
+      <i class="fas fa-lock"></i>
+      Password
+    </label>
+    <input 
+      type="password" 
+      id="password" 
+      name="password" 
+      required 
+      autocomplete="current-password" 
+      placeholder="Enter your password" 
+    />
+    
+    <button type="submit">
+      <i class="fas fa-sign-in-alt"></i>
+      Login
+    </button>
   
-    <a href="{{ url_for('forgot_password') }}" id="forgot_password_link"><i class="fas fa-key"></i> Forgot Password?</a><br><br>
+    <a href="{{ url_for('forgot_password') }}" id="forgot_password_link">
+      <i class="fas fa-key"></i> 
+      Forgot Password?
+    </a>
     
-    <a href="{{ url_for('register') }}" id="register_hyperlink"><i class="fas fa-user-plus"></i> Don't have account? Register here</a>
+    <a href="{{ url_for('register') }}" id="register_hyperlink">
+      <i class="fas fa-user-plus"></i> 
+      Don't have an account? Register here
+    </a>
   </form>
 
+  <!-- Theme Toggle Button -->
   <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle dark mode">
     <i class="fas fa-moon"></i>
   </button>
 
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="footer-content">
+      <p>&copy; 2025 Flow4Ops v1.0.0 • Powered by Flow4</p>
+    </div>
+  </footer>
+
   <script>
-    // Flash message auto-dismiss functionality
+    // ============================================
+    // Flash Message Functions
+    // ============================================
     function dismissFlash(element) {
       element.classList.add('fade-out');
       setTimeout(() => {
@@ -199,6 +125,9 @@
       });
     }
 
+    // ============================================
+    // Theme Toggle Function
+    // ============================================
     function toggleTheme() {
       const body = document.body;
       const icon = document.querySelector('.theme-toggle i');
@@ -216,8 +145,11 @@
       }
     }
 
-    // Check for saved theme preference and initialize flash messages
+    // ============================================
+    // Initialize on Page Load
+    // ============================================
     document.addEventListener('DOMContentLoaded', () => {
+      // Check for saved theme preference
       const savedTheme = localStorage.getItem('theme');
       const icon = document.querySelector('.theme-toggle i');
       
@@ -231,12 +163,5 @@
       autoDismissFlash();
     });
   </script>
-
-  <!-- Footer -->
-  <footer class="site-footer">
-    <div class="footer-content">
-      <p>&copy; 2025 Ticket Tracking and Analysis Hub. All rights reserved.</p>
-    </div>
-  </footer>
 </body>
 </html>
