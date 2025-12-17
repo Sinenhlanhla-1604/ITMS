@@ -17,6 +17,10 @@ import secrets
 from dotenv import load_dotenv
 import uuid
 from werkzeug.utils import secure_filename
+from terminology import (
+    get_term, get_status_display, get_status_color,
+    get_type_icon, get_nav_label, get_terminology_context
+)
 
 # Load environment variables
 load_dotenv()
@@ -621,6 +625,32 @@ def get_organization_departments(org_id):
         print(f"Error getting organization departments: {e}")
         return []
 
+# ---  Helper Function for UI Labels ---
+def format_commitment_for_ui(commitment_dict):
+    """
+    Format a commitment (ticket) dictionary with UI-friendly terminology.
+    Non-destructive: keeps original DB fields, adds display fields.
+    
+    Args:
+        commitment_dict: Dictionary from database query
+        
+    Returns:
+        Enhanced dictionary with display fields
+    """
+    # Create a copy to avoid mutating original
+    formatted = commitment_dict.copy()
+    
+    # Add display versions
+    if 'status' in formatted:
+        formatted['status_display'] = get_status_display(formatted['status'])
+        formatted['status_color'] = get_status_color(formatted['status'])
+    
+    if 'ticket_type' in formatted:
+        formatted['type_display'] = get_term(formatted['ticket_type'])
+        formatted['type_icon'] = get_type_icon(formatted['ticket_type'])
+    
+    return formatted
+
 # --- Session Configuration ---
 def configure_session_timeout():
     """Configure Flask session timeout from database settings"""
@@ -690,6 +720,23 @@ def require_org_context(f):
         
         return f(*args, **kwargs)
     return decorated_function
+
+
+
+@app.context_processor
+def inject_terminology():
+    """Make terminology helpers available in all templates"""
+    return get_terminology_context()
+
+@app.context_processor
+def inject_branding():
+    """Inject Flow4Ops branding"""
+    return {
+        'app_name': 'Flow4Ops',
+        'app_tagline': 'Operational Accountability Platform',
+    }
+
+
 
 # --- Routes ---
 
