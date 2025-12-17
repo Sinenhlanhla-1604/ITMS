@@ -1,293 +1,403 @@
-/* Modern Login Styling */
 :root {
-  /* Light Theme */
-  --primary-color: #1e3a8a;
-  --primary-hover: #566386;
-  --success-color: #16a34a;
-  --error-color: #dc2626;
-  --warning-color: #d97706;
-  --text-primary: #000000; 
-  --text-secondary: #000000;
-  --bg-primary: #f3f4f6;
-  --bg-secondary: #ffffff;
-  --border-color: #5a5a5a;
+  /* Light Theme - Emerald & Teal */
+  --primary-color: #059669;  /* Emerald */
+  --primary-hover: #047857;
+  --accent-color: #0891b2;   /* Teal */
+  
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #64748b;  /* Darker for better contrast */
+  
+  /* Soft gray background */
+  --bg-primary: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 50%, #f1f5f9 100%);
+  --bg-card: #ffffff;
+  --bg-input: #f8fafc;
+  
+  --border-color: #cbd5e1;
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-  --header-color: #1e3a8a;
-  --acronym-color: #1e3a8a;
-  --bg-gradient: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
-  --card-hover-transform: translateY(-2px);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.08);
+  
   --transition-speed: 0.3s;
 }
 
+/* Dark Theme - Smoke Gray with Emerald/Teal accents */
 [data-theme="dark"] {
-  --primary-color: #3b82f6;
-  --primary-hover: #60a5fa;
-  --text-primary: #ffffff;
-  --text-secondary: #e5e7eb;
-  --bg-primary: #111827;
-  --bg-secondary: #1f2937;
-  --border-color: #4b5563;
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4);
-  --header-color: #60a5fa;
-  --acronym-color: #93c5fd;
-  --bg-gradient: linear-gradient(135deg, #111827 0%, #1f2937 100%);
+  --primary-color: #10b981;  /* Brighter emerald for dark mode */
+  --primary-hover: #34d399;
+  --accent-color: #06b6d4;   /* Teal */
+  
+  --text-primary: #f1f5f9;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  
+  /* Gray/smoke gradient background - Flow4HR style */
+  --bg-primary: linear-gradient(135deg, #18181b 0%, #27272a 50%, #18181b 100%);
+  --bg-card: #27272a;
+  --bg-input: #1e293b;
+  
+  --border-color: #3f3f46;
+  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.3);
+  --shadow-md: 0 6px 12px -2px rgb(0 0 0 / 0.5);
 }
 
-.system-header {
-  text-align: center;
-  margin-bottom: 2rem;
-  padding: 1rem;
-  width: 100%;
-  max-width: 600px;
-  animation: fadeIn 0.5s ease-out;
-}
-
-.system-name {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 2rem;
-  font-weight: 700;
-  color: var(--header-color);
-  margin-bottom: 0.5rem;
-  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-  letter-spacing: -0.025em;
-}
-
-.system-acronym {
-  display: block;
-  font-size: 1.25rem;
-  font-weight: 500;
-  color: var(--acronym-color);
-  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-  letter-spacing: 0.05em;
+/* ============================================
+   Base Styles
+============================================ */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
 body {
-  font-family: Arial, sans-serif;
-  background: var(--bg-gradient);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  background: var(--bg-primary);
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  margin: 0;
   color: var(--text-primary);
-  transition: background var(--transition-speed) ease;
+  transition: background 0.4s ease, color 0.3s ease;
+  padding: 2rem 1rem 4rem;
   position: relative;
-  padding-bottom: 60px; /* Height of the footer */
 }
 
+/* ============================================
+   Header - Clean & Professional
+============================================ */
+.system-header {
+  text-align: center;
+  margin-bottom: 2.5rem;
+  animation: fadeIn 0.8s ease-out;
+}
+
+.system-header span {
+  display: block;
+  font-size: 2.75rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  margin-bottom: 0.75rem;
+  
+  /* Emerald → Teal Gradient */
+  background: linear-gradient(135deg, #10b981 0%, #06b6d4 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.tagline {
+  font-size: 1rem;
+  color: var(--text-secondary);
+  font-weight: 400;
+  margin: 0;
+  letter-spacing: 0.01em;
+}
+
+/* ============================================
+   Form Card - Minimal & Professional
+============================================ */
 form {
-  background: var(--bg-secondary);
-  padding: 2rem;
-  border-radius: 0.75rem;
+  background: var(--bg-card);
+  padding: 2.5rem;
+  border-radius: 0.875rem;
   box-shadow: var(--shadow-md);
   width: 100%;
-  max-width: 400px;
-  margin: 1rem;
-  transition: all var(--transition-speed) ease;
-  animation: fadeIn 0.5s ease-out;
+  max-width: 420px;
+  border: 1px solid var(--border-color);
+  animation: fadeInUp 0.6s ease-out;
+  transition: all 0.3s ease;
 }
 
+/* Subtle hover - not overdone */
 form:hover {
-  transform: var(--card-hover-transform);
-  box-shadow: 0 8px 12px -1px rgb(0 0 0 / 0.2);
+  box-shadow: 0 8px 16px -4px rgb(0 0 0 / 0.12);
 }
 
+/* ============================================
+   Form Elements - Clean Professional Style
+============================================ */
 h2 {
   text-align: center;
-  margin-bottom: 1.5rem;
+  margin-bottom: 2rem;
   color: var(--text-primary);
   font-size: 1.5rem;
   font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.625rem;
+}
+
+h2 i {
+  color: var(--primary-color);
+  font-size: 1.375rem;
 }
 
 label {
   display: block;
   margin-bottom: 0.5rem;
+  margin-top: 1.5rem;
   font-weight: 500;
   color: var(--text-secondary);
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+label i {
+  color: var(--primary-color);
   font-size: 0.875rem;
 }
 
 input[type="email"],
-input[type="password"] {
-  width: 90%;
-  padding: 15px 15px;
+input[type="password"],
+input[type="text"] {
+  width: 100%;
+  padding: 0.875rem 1rem;
   border: 1px solid var(--border-color);
   border-radius: 0.5rem;
-  font-size: 0.875rem;
-  transition: all var(--transition-speed) ease;
-  background: var(--bg-secondary);
+  font-size: 0.9375rem;
+  transition: all 0.2s ease;
+  
+  /* Match card background */
+  background: var(--bg-card);
+  
   color: var(--text-primary);
+  font-family: inherit;
 }
 
 input[type="email"]:focus,
-input[type="password"]:focus {
+input[type="password"]:focus,
+input[type="text"]:focus {
   outline: none;
   border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-  transform: translateY(-1px);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+  background: var(--bg-card);
 }
 
-button {
+input::placeholder {
+  color: var(--text-muted);
+}
+
+/* ============================================
+   Button - Emerald → Teal Gradient
+============================================ */
+button[type="submit"] {
   width: 100%;
-  margin-top: 50px;
-  padding: 12px;
-  background-color: var(--primary-color);
+  margin-top: 1.75rem;
+  padding: 0.875rem 1.5rem;
+  
+  /* Emerald → Teal Gradient */
+  background: linear-gradient(135deg, #10b981 0%, #06b6d4 100%);
+  
   border: none;
   color: white;
   font-weight: 500;
-  font-size: 0.875rem;
+  font-size: 0.9375rem;
   border-radius: 0.5rem;
   cursor: pointer;
-  transition: all var(--transition-speed) ease;
-  position: relative;
-  overflow: hidden;
-}
-
-button:hover {
-  background-color: var(--primary-hover);
-  transform: translateY(-1px);
-}
-
-button:active {
-  transform: translateY(0);
-}
-
-button::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 5px;
-  height: 5px;
-  background: rgba(255, 255, 255, 0.5);
-  opacity: 0;
-  border-radius: 100%;
-  transform: scale(1, 1) translate(-50%);
-  transform-origin: 50% 50%;
-}
-
-button:focus:not(:active)::after {
-  animation: ripple 1s ease-out;
-}
-
-#register_hyperlink {
-  display: block;
-  text-align: center;
-  margin-top: -20px;
-  text-decoration: none;
-  color: var(--primary-color);
-  font-size: 0.875rem;
-  font-weight: 500;
-  transition: color var(--transition-speed) ease;
-}
-
-#register_hyperlink:hover {
-  text-decoration: underline;
-  color: var(--primary-hover);
-}
-
-.flashes {
-  list-style: none;
-  padding: 0.75rem 1rem;
-  margin-bottom: 1rem;
-  border-radius: 0.5rem;
-  background-color: #f0fdf4;
-  color: var(--success-color);
-  border: 1px solid #dcfce7;
-  font-weight: 500;
-  text-align: center;
-  font-size: 0.875rem;
-  animation: fadeIn 0.3s ease-out;
-}
-
-.flashes li {
-  padding: 0.5rem;
-  margin-bottom: 0.5rem;
-  border-radius: 0.375rem;
-  font-size: 0.875rem;
-}
-
-.flashes li.error {
-  background-color: #fef2f2;
-  color: var(--error-color);
-  border: 1px solid #fee2e2;
-}
-
-.flashes li.success {
-  background-color: #f0fdf4;
-  color: var(--success-color);
-  border: 1px solid #dcfce7;
-}
-
-#forgot_password_link {
-  color: var(--primary-color);
-  text-decoration: none;
-  font-size: 0.875rem;
-  font-weight: 500;
-  display: block;
-  text-align: center;
-  margin-top: 25px;
-  transition: color var(--transition-speed) ease;
-}
-
-#forgot_password_link:hover {
-  text-decoration: underline;
-  color: var(--primary-hover);
-}
-
-#back_to_login {
-  color: var(--primary-color);
-  text-decoration: none;
-  font-size: 0.875rem;
-  font-weight: 500;
-  display: block;
-  text-align: center;
-  margin-top: 0.75rem;
-  transition: color var(--transition-speed) ease;
-}
-
-#back_to_login:hover {
-  text-decoration: underline;
-  color: var(--primary-hover);
-}
-
-.theme-toggle {
-  position: fixed;
-  top: 1rem;
-  right: 1rem;
-  background: transparent;
-  border: none;
-  color: var(--text-primary);
-  cursor: pointer;
-  padding: 0.5rem;
-  border-radius: 50%;
-  width: 40px;
-  height: 40px;
+  transition: all 0.3s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all var(--transition-speed) ease;
+  gap: 0.5rem;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+}
+
+button[type="submit"]:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+  
+  /* Slightly brighter on hover */
+  background: linear-gradient(135deg, #34d399 0%, #22d3ee 100%);
+}
+
+button[type="submit"]:active {
+  transform: translateY(0);
+}
+
+/* ============================================
+   Links - Better contrast for light theme
+============================================ */
+#forgot_password_link,
+#register_hyperlink {
+  display: block;
+  text-align: center;
+  margin-top: 1rem;
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+
+#forgot_password_link:hover,
+#register_hyperlink:hover {
+  color: var(--primary-color);
+}
+
+#forgot_password_link {
+  margin-top: 1.25rem;
+}
+
+#register_hyperlink {
+  margin-top: 0.75rem;
+}
+
+/* ============================================
+   Theme Toggle - Refined
+============================================ */
+.theme-toggle {
+  position: fixed;
+  top: 1.5rem;
+  right: 1.5rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0.75rem;
+  border-radius: 50%;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  box-shadow: var(--shadow-sm);
+  z-index: 1000;
 }
 
 .theme-toggle:hover {
-  background: rgba(0, 0, 0, 0.1);
+  background: var(--bg-input);
+  color: var(--primary-color);
+  transform: scale(1.05);
+  box-shadow: var(--shadow-md);
+}
+
+.theme-toggle i {
+  font-size: 1.125rem;
+}
+
+/* ============================================
+   Flash Messages - Professional Style
+============================================ */
+.flash-messages {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9999;
+  max-width: 420px;
+  pointer-events: none;
+}
+
+.flash-message {
+  padding: 1rem 1.25rem;
+  margin-bottom: 0.75rem;
+  border-radius: 0.75rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  animation: slideInRight 0.4s ease-out;
+  opacity: 1;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(12px);
+  border: 1px solid;
+  pointer-events: auto;
+  font-weight: 500;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.flash-message.success {
+  background: rgba(16, 185, 129, 0.95);
+  color: white;
+  border-color: rgba(5, 150, 105, 0.3);
+}
+
+.flash-message.error {
+  background: rgba(239, 68, 68, 0.95);
+  color: white;
+  border-color: rgba(220, 38, 38, 0.3);
+}
+
+.flash-message.info {
+  background: rgba(59, 130, 246, 0.95);
+  color: white;
+  border-color: rgba(37, 99, 235, 0.3);
+}
+
+.flash-message .close-btn {
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  cursor: pointer;
+  color: white;
+  opacity: 0.8;
+  padding: 0;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.flash-message .close-btn:hover {
+  opacity: 1;
+  background-color: rgba(255, 255, 255, 0.2);
   transform: scale(1.1);
 }
 
-[data-theme="dark"] .theme-toggle:hover {
-  background: rgba(255, 255, 255, 0.1);
+.flash-message.fade-out {
+  opacity: 0;
+  transform: translateX(100%);
 }
 
+/* ============================================
+   Footer - Floating Style (Flow4HR)
+============================================ */
+.site-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  
+  /* NO BORDER - floating style */
+  background: transparent;
+  
+  color: var(--text-muted);
+  padding: 1.5rem;
+  text-align: center;
+  font-size: 0.8125rem;
+  z-index: 100;
+  
+  /* Subtle fade effect */
+  opacity: 0.7;
+  transition: opacity 0.3s ease;
+}
+
+.site-footer:hover {
+  opacity: 1;
+}
+
+.footer-content p {
+  margin: 0;
+  font-weight: 400;
+}
+
+/* ============================================
+   Animations - Smooth & Professional
+============================================ */
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(-15px);
   }
   to {
     opacity: 1;
@@ -295,68 +405,117 @@ button:focus:not(:active)::after {
   }
 }
 
-@keyframes ripple {
-  0% {
-    transform: scale(0, 0);
-    opacity: 0.5;
-  }
-  100% {
-    transform: scale(100, 100);
+@keyframes fadeInUp {
+  from {
     opacity: 0;
+    transform: translateY(25px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* ============================================
+   Responsive Design
+============================================ */
+@media (max-width: 768px) {
+  body {
+    padding: 1.5rem 0.75rem 5rem;
+  }
+  
+  .system-header span {
+    font-size: 2.25rem;
+  }
+  
+  .tagline {
+    font-size: 0.9375rem;
+  }
+  
+  form {
+    padding: 2rem;
+    max-width: 100%;
+    margin: 0 0.5rem;
+  }
+  
+  .theme-toggle {
+    top: 1rem;
+    right: 1rem;
+    width: 44px;
+    height: 44px;
+  }
+  
+  .flash-messages {
+    top: 15px;
+    right: 15px;
+    left: 15px;
+    max-width: none;
   }
 }
 
 @media (max-width: 480px) {
+  .system-header span {
+    font-size: 2rem;
+  }
+  
   form {
-    margin: 1rem;
-    padding: 1.5rem;
+    padding: 1.75rem;
   }
   
-  .system-name {
-    font-size: 1.5rem;
+  h2 {
+    font-size: 1.375rem;
+  }
+}
+
+/* ============================================
+   Dark Theme Specific Refinements
+============================================ */
+[data-theme="dark"] .theme-toggle {
+  background: rgba(39, 39, 42, 0.8);
+  border-color: #3f3f46;
+}
+
+[data-theme="dark"] .theme-toggle:hover {
+  background: rgba(63, 63, 70, 0.9);
+}
+
+[data-theme="dark"] input[type="email"],
+[data-theme="dark"] input[type="password"],
+[data-theme="dark"] input[type="text"] {
+  background: var(--bg-card);
+  border-color: #3f3f46;
+}
+
+[data-theme="dark"] input[type="email"]:focus,
+[data-theme="dark"] input[type="password"]:focus,
+[data-theme="dark"] input[type="text"]:focus {
+  background: var(--bg-card);
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+}
+
+/* ============================================
+   Print Styles
+============================================ */
+@media print {
+  .theme-toggle,
+  .flash-messages,
+  .site-footer {
+    display: none;
   }
   
-  .system-acronym {
-    font-size: 1rem;
+  body {
+    background: white;
   }
-  
-  .theme-toggle {
-    top: 0.5rem;
-    right: 0.5rem;
-    width: 32px;
-    height: 32px;
-  }
-}
-
-/* Footer Styles */
-.site-footer {
-  background: var(--bg-secondary);
-  color: var(--text-secondary);
-  padding: 0.75rem 2rem;
-  text-align: center;
-  box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.05);
-  border-top: 1px solid var(--border-color);
-  opacity: 0.9;
-  width: 100%;
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-}
-
-.footer-content {
-  max-width: 100%;
-  margin: 0 auto;
-  font-size: 0.85rem;
-  font-weight: 400;
-}
-
-.footer-content p {
-  margin: 0;
-  padding: 0.25rem 0;
-}
-
-/* Remove the bottom margin since footer is no longer fixed */
-.login-container {
-  margin-bottom: 0;
 }
