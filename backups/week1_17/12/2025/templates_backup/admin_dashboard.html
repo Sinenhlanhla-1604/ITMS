@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>TTAH - Admin Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/admin-style.css') }}" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+      .logo {
+      width: 150px; /* A bit smaller for the nav bar */
+      height: auto;
+      padding: 10px;
+      vertical-align: middle;
+      margin-right: 10px;
+    }
+      .sidebar-header {
+        text-align: center;
+      }
+    </style>
+</head>
+<body>
+    <div class="dashboard-wrapper">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <img src="{{ url_for('static', filename='img/ttah_logo.png') }}" alt="TTAH Logo" class="logo">
+                <h3>Admin Panel</h3>
+                {% if session.org_name %}
+                <p style="font-size: 0.75rem; opacity: 0.7; margin-top: 0.25rem;">{{ session.org_name }}</p>
+                {% endif %}
+            </div>
+            <ul class="sidebar-menu">
+                <li class="active">
+                    <a href="/admin/dashboard"><i class="bi bi-speedometer2"></i> Dashboard</a>
+                </li>
+                <li>
+                    <a href="/admin/users"><i class="bi bi-people"></i> Users</a>
+                </li>
+                <li>
+                    <a href="/admin/settings"><i class="bi bi-gear"></i> Settings</a>
+                </li>
+            </ul>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Flash Messages Container -->
+            <div id="flash-messages" class="flash-messages">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="flash-message {{ category }}" data-category="{{ category }}">
+                                <span>{{ message }}</span>
+                                <button type="button" class="close-btn" onclick="dismissFlash(this.parentElement)">&times;</button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+            </div>
+
+            <!-- Top Navigation -->
+            <nav class="top-nav">
+                <div class="region-filter">
+                    <label for="regionFilter">Region:</label>
+                    <select id="regionFilter" onchange="filterByRegion()">
+                        <option value="">All Regions</option>
+                    </select>
+                </div>
+                <div class="user-menu">
+                    <div class="admin-profile">
+                        <span class="admin-name">{{ session.name }}</span>
+                        <img src="https://ui-avatars.com/api/?name={{ session.name }}&background=4e73df&color=fff" alt="Admin Profile" />
+                    </div>
+                    <div class="theme-toggle">
+                        <button id="themeToggle"><i class="bi bi-moon"></i></button>
+                    </div>
+                    <a href="/logout" class="btn btn-outline-primary btn-sm">Logout</a>
+                </div>
+            </nav>
+
+            <!-- Stats Grid -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="bi bi-ticket-detailed"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3>Total Tickets</h3>
+                        <div class="stat-number" id="totalTickets">{{ total }}</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="bi bi-clock"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3>Open Tickets</h3>
+                        <div class="stat-number" id="openTickets">{{ open }}</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="bi bi-hourglass-split"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3>In Progress</h3>
+                        <div class="stat-number" id="inProgressTickets">{{ inProgress }}</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="bi bi-arrow-repeat"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3>Transferred</h3>
+                        <div class="stat-number" id="transferredTickets">{{ transferred }}</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="bi bi-check-circle"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3>Completed</h3>
+                        <div class="stat-number" id="completedTickets">{{ completed }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Region Filter Indicator -->
+            <div id="regionIndicator" class="region-indicator" style="display: none;">
+                <i class="bi bi-funnel"></i>
+                <span id="currentRegion">Filtered by: </span>
+                <button onclick="clearRegionFilter()" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-x"></i> Clear Filter
+                </button>
+            </div>
+
+            <!-- Charts Row -->
+            <div class="charts-row">
+                <div class="chart-container">
+                    <h3>Ticket Distribution</h3>
+                    <canvas id="ticketDistributionChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <h3>Ticket Trends</h3>
+                    <canvas id="ticketTrendsChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="recent-activity">
+                <div class="recent-activity-header">
+                    <h3>Recent Activity</h3>
+                    <button class="action-btn" onclick="showExportModal()" id="exportBtn">
+                        <i class="bi bi-file-earmark-spreadsheet"></i>
+                        Export CSV
+                    </button>
+                </div>
+                <div class="activity-feed" id="activityFeed">
+                    <!-- Activity items will be dynamically added here -->
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="quick-actions">
+                <!-- <button class="action-btn" onclick="showExportModal()" id="exportBtn">
+                    <i class="bi bi-file-earmark-spreadsheet"></i>
+                    Export CSV
+                </button> -->
+                <!-- <button class="action-btn" onclick="createAnnouncement()">
+                    <i class="bi bi-megaphone"></i>
+                    New Announcement
+                </button> -->
+                <!-- <button class="action-btn" onclick="viewEscalated()">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    Escalated Tickets
+                </button> -->
+                <!-- <button class="action-btn" onclick="manageCategories()">
+                    <i class="bi bi-tags"></i>
+                    Manage Categories
+                </button> -->
+            </div>
+        </main>
+    </div>
+
+    <!-- Export Filter Modal -->
+    <div id="exportModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Export Tickets to CSV</h3>
+                <span class="close" onclick="closeExportModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="exportForm">
+                    <div class="form-group">
+                        <label for="startDate">Start Date:</label>
+                        <input type="date" id="startDate" name="startDate">
+                    </div>
+                    <div class="form-group">
+                        <label for="endDate">End Date:</label>
+                        <input type="date" id="endDate" name="endDate">
+                    </div>
+                    <div class="form-group">
+                        <label for="regionFilter">Region:</label>
+                        <select id="regionFilter" name="regionFilter">
+                            <option value="">All Regions</option>
+                        </select>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" onclick="closeExportModal()" class="btn btn-secondary">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Export CSV</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Store chart instances
+        let distributionChart = null;
+        let trendsChart = null;
+
+        // Initialize the page
+        document.addEventListener('DOMContentLoaded', () => {
+            // Check for saved theme preference
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'dark') {
+                document.body.classList.add('dark-theme');
+                document.getElementById('themeToggle').querySelector('i').classList.replace('bi-moon', 'bi-sun');
+            }
+            
+            // Set active navigation item based on current page
+            const currentPath = window.location.pathname;
+            const navItems = document.querySelectorAll('.sidebar-menu li');
+            navItems.forEach(item => {
+                const link = item.querySelector('a');
+                if (link.getAttribute('href') === currentPath) {
+                    item.classList.add('active');
+                } else {
+                    item.classList.remove('active');
+                }
+            });
+            
+            initializeCharts();
+            loadDashboardData();
+            loadRegions();
+            
+            // Start auto-dismiss for flash messages
+            autoDismissFlash();
+            
+            // Add form submission handler
+            document.getElementById('exportForm').addEventListener('submit', handleExportSubmit);
+            
+            // Add modal close functionality
+            setupModalCloseHandlers();
+        });
+
+        // Setup modal close handlers
+        function setupModalCloseHandlers() {
+            const modal = document.getElementById('exportModal');
+            
+            // Close modal when clicking outside
+            modal.addEventListener('click', function(event) {
+                if (event.target === modal) {
+                    closeExportModal();
+                }
+            });
+            
+            // Close modal with Escape key
+            document.addEventListener('keydown', function(event) {
+                if (event.key === 'Escape' && modal.style.display === 'block') {
+                    closeExportModal();
+                }
+            });
+        }
+
+        // Initialize Charts
+        function initializeCharts() {
+            const isDarkMode = document.body.classList.contains('dark-theme');
+            const textColor = isDarkMode ? '#ffffff' : '#5a5c69';
+            const gridColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+
+            // Destroy existing charts if they exist
+            if (distributionChart) {
+                distributionChart.destroy();
+            }
+            if (trendsChart) {
+                trendsChart.destroy();
+            }
+
+            // Get region filter
+            const regionFilter = document.getElementById('regionFilter').value;
+            const regionParam = regionFilter ? `?region=${encodeURIComponent(regionFilter)}` : '';
+
+            // Fetch chart data
+            fetch(`/api/admin/chart-data${regionParam}`)
+                .then(response => response.json())
+                .then(data => {
+                    // Ticket Distribution Chart
+                    const distributionCtx = document.getElementById('ticketDistributionChart').getContext('2d');
+                    distributionChart = new Chart(distributionCtx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: data.distribution.labels,
+                            datasets: [{
+                                data: data.distribution.data,
+                                backgroundColor: [
+                                    'rgba(78, 115, 223, 0.8)',
+                                    'rgba(28, 200, 138, 0.8)',
+                                    'rgba(54, 185, 204, 0.8)',
+                                    'rgba(246, 194, 62, 0.8)',
+                                    'rgba(231, 74, 59, 0.8)'
+                                ],
+                                borderColor: isDarkMode ? '#2d3238' : '#ffffff',
+                                borderWidth: 2
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'bottom',
+                                    labels: {
+                                        color: textColor,
+                                        font: {
+                                            size: 12
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+
+                    // Ticket Trends Chart
+                    const trendsCtx = document.getElementById('ticketTrendsChart').getContext('2d');
+                    trendsChart = new Chart(trendsCtx, {
+                        type: 'bar',
+                        data: {
+                            labels: data.trends.labels,
+                            datasets: [{
+                                label: 'Tickets Created',
+                                data: data.trends.data,
+                                backgroundColor: 'rgba(78, 115, 223, 0.8)',
+                                borderColor: isDarkMode ? '#2d3238' : '#4e73df',
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'bottom',
+                                    labels: {
+                                        color: textColor,
+                                        font: {
+                                            size: 12
+                                        }
+                                    }
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    grid: {
+                                        color: gridColor
+                                    },
+                                    ticks: {
+                                        color: textColor,
+                                        precision: 0,
+                                        font: {
+                                            size: 12
+                                        }
+                                    }
+                                },
+                                x: {
+                                    grid: {
+                                        color: gridColor
+                                    },
+                                    ticks: {
+                                        color: textColor,
+                                        font: {
+                                            size: 12
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading chart data:', error);
+                    const errorMessage = '<p style="color: var(--text-color);">Error loading chart data. Please try refreshing the page.</p>';
+                    document.getElementById('ticketDistributionChart').parentElement.innerHTML = errorMessage;
+                    document.getElementById('ticketTrendsChart').parentElement.innerHTML = errorMessage;
+                });
+        }
+
+        // Load dashboard data
+        function loadDashboardData() {
+            const regionFilter = document.getElementById('regionFilter').value;
+            const regionParam = regionFilter ? `?region=${encodeURIComponent(regionFilter)}` : '';
+            
+            // Fetch and update ticket counts
+            fetch(`/api/admin/dashboard-stats${regionParam}`)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('totalTickets').textContent = data.total;
+                    document.getElementById('openTickets').textContent = data.open;
+                    document.getElementById('inProgressTickets').textContent = data.inProgress;
+                    document.getElementById('transferredTickets').textContent = data.transferred;
+                    document.getElementById('completedTickets').textContent = data.completed;
+                });
+
+            // Load recent activity
+            fetch(`/api/admin/recent-activity${regionParam}`)
+                .then(response => response.json())
+                .then(activities => {
+                    const activityFeed = document.getElementById('activityFeed');
+                    activityFeed.innerHTML = ''; // Clear existing activities
+                    activities.forEach(activity => {
+                        const activityItem = document.createElement('div');
+                        activityItem.className = 'activity-item';
+                        activityItem.innerHTML = `
+                            <div class="activity-icon">
+                                <i class="bi bi-${activity.icon}"></i>
+                            </div>
+                            <div class="activity-content">
+                                <p class="activity-title">${activity.description}</p>
+                                <div class="activity-meta">
+                                    <small class="activity-time">${activity.timestamp}</small>
+                                </div>
+                            </div>
+                        `;
+                        activityFeed.appendChild(activityItem);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading recent activity:', error);
+                    const activityFeed = document.getElementById('activityFeed');
+                    activityFeed.innerHTML = '<div class="activity-item"><p>Error loading recent activity</p></div>';
+                });
+        }
+
+        // Filter by region function
+        function filterByRegion() {
+            const regionFilter = document.getElementById('regionFilter').value;
+            const regionIndicator = document.getElementById('regionIndicator');
+            const currentRegionSpan = document.getElementById('currentRegion');
+            
+            if (regionFilter) {
+                currentRegionSpan.textContent = `Filtered by: ${regionFilter}`;
+                regionIndicator.style.display = 'flex';
+            } else {
+                regionIndicator.style.display = 'none';
+            }
+            
+            loadDashboardData();
+            initializeCharts();
+        }
+
+        // Clear region filter function
+        function clearRegionFilter() {
+            document.getElementById('regionFilter').value = '';
+            document.getElementById('regionIndicator').style.display = 'none';
+            loadDashboardData();
+            initializeCharts();
+        }
+
+        // Theme toggle functionality
+        const themeToggle = document.getElementById('themeToggle');
+        themeToggle.addEventListener('click', () => {
+            const isDark = document.body.classList.toggle('dark-theme');
+            const icon = themeToggle.querySelector('i');
+            
+            if (isDark) {
+                icon.classList.replace('bi-moon', 'bi-sun');
+                localStorage.setItem('theme', 'dark');
+            } else {
+                icon.classList.replace('bi-sun', 'bi-moon');
+                localStorage.setItem('theme', 'light');
+            }
+            
+            // Reinitialize charts with new theme
+            initializeCharts();
+        });
+
+        // Load regions for the filter dropdown
+        function loadRegions() {
+            fetch('/api/admin/regions')
+                .then(response => response.json())
+                .then(data => {
+                    const regionSelect = document.getElementById('regionFilter');
+                    // Clear existing options except "All Regions"
+                    regionSelect.innerHTML = '<option value="">All Regions</option>';
+                    
+                    data.regions.forEach(region => {
+                        const option = document.createElement('option');
+                        option.value = region;
+                        option.textContent = region;
+                        regionSelect.appendChild(option);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading regions:', error);
+                });
+        }
+
+        // Quick action functions
+        function showExportModal() {
+            // Show the export modal
+            document.getElementById('exportModal').style.display = 'block';
+        }
+
+        function closeExportModal() {
+            // Hide the export modal
+            document.getElementById('exportModal').style.display = 'none';
+        }
+
+        function handleExportSubmit(event) {
+            event.preventDefault();
+            
+            const formData = new FormData(event.target);
+            const startDate = formData.get('startDate');
+            const endDate = formData.get('endDate');
+            const region = formData.get('regionFilter');
+            
+            // Validate date range
+            if (startDate && endDate && startDate > endDate) {
+                showFlashMessage('Start date cannot be after end date', 'error');
+                return;
+            }
+            
+            // Close modal and start export
+            closeExportModal();
+            exportData('csv', startDate, endDate, region);
+        }
+
+        function exportData(format, startDate = '', endDate = '', region = '') {
+            if (!format) {
+                console.error('Format is required for export');
+                return;
+            }
+
+            // Get the export button and show loading state
+            const exportBtn = document.getElementById('exportBtn');
+            const originalText = exportBtn.innerHTML;
+            exportBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Exporting...';
+            exportBtn.disabled = true;
+
+            // Prepare export data
+            const exportData = {
+                format: format,
+                start_date: startDate,
+                end_date: endDate,
+                region: region
+            };
+
+            fetch('/api/admin/export-data', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(exportData)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(data => {
+                        throw new Error(data.error || `HTTP error! status: ${response.status}`);
+                    });
+                }
+                // Store response for filename extraction
+                const responseForFilename = response;
+                return response.blob().then(blob => {
+                    return { blob, response: responseForFilename };
+                });
+            })
+            .then(({ blob, response }) => {
+                // Create a link to download the CSV file
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                
+                // Get filename from response headers or use default
+                const contentDisposition = response.headers.get('Content-Disposition');
+                let filename = `tickets_export.${format}`;
+                if (contentDisposition) {
+                    const filenameMatch = contentDisposition.match(/filename=(.+)/);
+                    if (filenameMatch) {
+                        filename = filenameMatch[1].replace(/"/g, '');
+                    }
+                }
+                
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(url);
+                
+                // Show success message
+                showFlashMessage('CSV export completed successfully!', 'success');
+            })
+            .catch(error => {
+                console.error('Error exporting data:', error);
+                showFlashMessage(`Error exporting data: ${error.message}`, 'error');
+            })
+            .finally(() => {
+                // Restore button state
+                exportBtn.innerHTML = originalText;
+                exportBtn.disabled = false;
+            });
+        }
+
+        function showFlashMessage(message, category) {
+            const flashContainer = document.getElementById('flash-messages');
+            const flashDiv = document.createElement('div');
+            flashDiv.className = `flash-message ${category}`;
+            flashDiv.dataset.category = category;
+            flashDiv.innerHTML = `
+                <span>${message}</span>
+                <button type="button" class="close-btn" onclick="dismissFlash(this.parentElement)">&times;</button>
+            `;
+            flashContainer.appendChild(flashDiv);
+            
+            // Auto-dismiss after 5 seconds
+            setTimeout(() => {
+                if (flashDiv.parentElement) {
+                    dismissFlash(flashDiv);
+                }
+            }, 5000);
+        }
+
+        function createAnnouncement() {
+            // Show a simple prompt for now - can be enhanced with a modal later
+            const issueDescription = prompt('Enter issue description for announcement:');
+            if (issueDescription && issueDescription.trim()) {
+                createAnnouncementRequest(issueDescription.trim());
+            }
+        }
+
+        function createAnnouncementRequest(issueDescription) {
+            fetch('/api/admin/announcements', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    issue_description: issueDescription
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(data => {
+                        throw new Error(data.error || `HTTP error! status: ${response.status}`);
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.announcement_id) {
+                    alert('Announcement sent successfully.');
+                } else {
+                    console.error('Unexpected response:', data);
+                    alert(data.error || 'Failed to create announcement.');
+                }
+            })
+            .catch(error => {
+                console.error('Error creating announcement:', error);
+                alert(error.message || 'Error creating announcement. Please try again.');
+            });
+        }
+
+        // Flash message auto-dismiss functionality
+        function dismissFlash(element) {
+            element.classList.add('fade-out');
+            setTimeout(() => {
+                element.remove();
+            }, 300);
+        }
+
+        function autoDismissFlash() {
+            const flashMessages = document.querySelectorAll('.flash-message');
+            flashMessages.forEach(message => {
+                const category = message.dataset.category;
+                let timeout = 5000; // Default 5 seconds
+                
+                // Different timeouts for different message types
+                if (category === 'error') {
+                    timeout = 8000; // Errors stay longer
+                } else if (category === 'success') {
+                    timeout = 4000; // Success messages disappear faster
+                }
+                
+                setTimeout(() => {
+                    if (message.parentElement) {
+                        dismissFlash(message);
+                    }
+                }, timeout);
+            });
+        }
+    </script>
+    <footer class="site-footer">
+        <div class="footer-content">
+          <p>&copy; 2025 Ticket Tracking and Analysis Hub. All rights reserved.</p>
+        </div>
+      </footer>
+</body>
+</html>

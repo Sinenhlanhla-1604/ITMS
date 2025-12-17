@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>TTAH - User Management</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/admin-style.css') }}" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+    <style>
+        .logo {
+      width: 150px; /* A bit smaller for the nav bar */
+      height: auto;
+      padding: 10px;
+      vertical-align: middle;
+      margin-right: 10px;
+    }
+        .sidebar-header {
+          text-align: center;
+        }
+        :root {
+            --card-bg: #ffffff;
+            --secondary-bg: #f8f9fc;
+            --text-color: #333333;
+            --primary-color: #4e73df;
+            --border-color: #a1a1a1;
+        }
+
+        .dark-theme {
+            --card-bg: #2d3238;
+            --secondary-bg: #3a4047;
+            --text-color: #ffffff;
+            --primary-color: #4e73df;
+            --border-color: #4e73df;
+        }
+
+        .user-card {
+            background: var(--card-bg);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+            color: var(--text-color);
+        }
+
+        .user-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+
+        .user-card.expanded {
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .user-stats {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .stat-badge {
+            background: var(--secondary-bg);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            color: var(--text-color);
+        }
+
+        .ticket-list {
+            margin-top: 1rem;
+            display: none;
+        }
+
+        .ticket-list.show {
+            display: block;
+        }
+
+        .ticket-item {
+            background: var(--secondary-bg);
+            border-radius: 6px;
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+            color: var(--text-color);
+        }
+
+        .ticket-history {
+            margin-top: 0.5rem;
+            padding-left: 1rem;
+            border-left: 2px solid var(--primary-color);
+        }
+
+        .history-item {
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            color: var(--text-color);
+        }
+
+        .search-container {
+            margin-bottom: 2rem;
+        }
+        
+        .top-nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 2rem;
+            background: var(--bg-color);
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 2rem;
+        }
+        
+        .search-container {
+            flex: 1;
+            max-width: 400px;
+            margin-bottom: 0;
+        }
+        
+        .user-menu {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        /* Responsive design for smaller screens */
+        @media (max-width: 768px) {
+            .top-nav {
+                flex-direction: column;
+                gap: 1rem;
+                padding: 1rem;
+            }
+            
+            .search-container {
+                width: 100%;
+                max-width: none;
+            }
+            
+            .user-menu {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+
+        .user-role {
+            text-transform: capitalize;
+            padding: 0.25rem 0.75rem;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .role-admin { background: #dc3545; color: white; }
+        .role-assignee { background: #0d6efd; color: white; }
+        .role-user { background: #198754; color: white; }
+
+        .dark-theme .text-muted {
+            color: #a0a0a0 !important;
+        }
+
+        .dark-theme .alert {
+            background-color: var(--secondary-bg);
+            color: var(--text-color);
+            border-color: var(--primary-color);
+        }
+
+        .dark-theme .form-control {
+            background-color: var(--secondary-bg);
+            border-color: var(--primary-color);
+            color: var(--text-color);
+        }
+
+        .dark-theme .input-group-text {
+            background-color: var(--secondary-bg);
+            border-color: var(--primary-color);
+            color: var(--text-color);
+        }
+
+        .dark-theme .badge.bg-secondary {
+            background-color: #6c757d !important;
+        }
+
+        .dark-theme .spinner-border {
+            color: var(--primary-color);
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-wrapper">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <img src="{{ url_for('static', filename='img/ttah_logo.png') }}" alt="BCM Logo" class="logo">
+                <h3>Admin Panel</h3>
+            </div>
+            <ul class="sidebar-menu">
+                <li>
+                    <a href="/admin/dashboard"><i class="bi bi-speedometer2"></i> Dashboard</a>
+                </li>
+                <li class="active">
+                    <a href="/admin/users"><i class="bi bi-people"></i> Users</a>
+                </li>
+                <!-- <li>
+                    <a href="#"><i class="bi bi-ticket-detailed"></i> Tickets</a>
+                </li> -->
+                <li>
+                    <a href="/admin/settings"><i class="bi bi-gear"></i> Settings</a>
+                </li>
+            </ul>
+            <div class="theme-toggle">
+                <button id="themeToggle"><i class="bi bi-moon"></i></button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Top Navigation -->
+            <nav class="top-nav">
+                <div class="search-container">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input type="text" id="userSearch" class="form-control" placeholder="Search users...">
+                    </div>
+                </div>
+                <div class="user-menu">
+                    <div class="admin-profile">
+                        <span class="admin-name">{{ session.name }}</span>
+                        <img src="https://ui-avatars.com/api/?name={{ session.name }}&background=4e73df&color=fff" alt="Admin Profile" />
+                    </div>
+                    <a href="/logout" class="btn btn-outline-primary btn-sm">Logout</a>
+                </div>
+            </nav>
+
+            <!-- Users List -->
+            <div class="users-container" id="usersList">
+                <!-- Users will be dynamically loaded here -->
+            </div>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Initialize the page
+        document.addEventListener('DOMContentLoaded', () => {
+            // Check for saved theme preference
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'dark') {
+                document.body.classList.add('dark-theme');
+                document.getElementById('themeToggle').querySelector('i').classList.replace('bi-moon', 'bi-sun');
+            }
+            
+            loadUsers();
+            setupSearch();
+        });
+
+        // Load users data
+        function loadUsers() {
+            fetch('/api/admin/users')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    const usersList = document.getElementById('usersList');
+                    usersList.innerHTML = ''; // Clear existing users
+
+                    if (data.users && data.users.length > 0) {
+                        data.users.forEach(user => {
+                            const userCard = createUserCard(user);
+                            usersList.appendChild(userCard);
+                        });
+                    } else {
+                        usersList.innerHTML = '<div class="alert alert-info">No users found.</div>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading users:', error);
+                    document.getElementById('usersList').innerHTML = 
+                        '<div class="alert alert-danger">Error loading users. Please try refreshing the page.</div>';
+                });
+        }
+
+        // Create user card element
+        function createUserCard(user) {
+            const card = document.createElement('div');
+            card.className = 'user-card';
+            card.innerHTML = `
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h4 class="mb-1">${user.name}</h4>
+                        <p class="text-muted mb-2">${user.email}</p>
+                        <span class="user-role role-${user.role.toLowerCase()}">${user.role}</span>
+                        <span class="badge bg-secondary ms-2">${user.region}</span>
+                    </div>
+                    <div class="text-end">
+                        <small class="text-muted">Member since ${user.created_at}</small>
+                    </div>
+                </div>
+                <div class="user-stats">
+                    <span class="stat-badge">
+                        <i class="bi bi-ticket-detailed"></i> ${user.total_tickets} Total
+                    </span>
+                    <span class="stat-badge">
+                        <i class="bi bi-clock"></i> ${user.open_tickets} Open
+                    </span>
+                    <span class="stat-badge">
+                        <i class="bi bi-check-circle"></i> ${user.closed_tickets} Closed
+                    </span>
+                </div>
+                <div class="ticket-list" id="tickets-${user.user_id}">
+                    <div class="text-center py-3">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Add click handler
+            card.addEventListener('click', () => {
+                const isExpanded = card.classList.contains('expanded');
+                
+                // Toggle expanded state
+                card.classList.toggle('expanded');
+                
+                // Load tickets if expanding
+                if (!isExpanded) {
+                    loadUserTickets(user.user_id);
+                } else {
+                    // Hide tickets when collapsing
+                    const ticketsContainer = document.getElementById(`tickets-${user.user_id}`);
+                    ticketsContainer.classList.remove('show');
+                }
+            });
+
+            return card;
+        }
+
+        // Load user's tickets
+        function loadUserTickets(userId) {
+            const ticketsContainer = document.getElementById(`tickets-${userId}`);
+            
+            fetch(`/api/admin/users/${userId}/tickets`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    ticketsContainer.innerHTML = ''; // Clear loading spinner
+                    
+                    if (data.tickets && data.tickets.length > 0) {
+                        data.tickets.forEach(ticket => {
+                            const ticketElement = createTicketElement(ticket);
+                            ticketsContainer.appendChild(ticketElement);
+                        });
+                    } else {
+                        ticketsContainer.innerHTML = '<div class="alert alert-info">No tickets found for this user.</div>';
+                    }
+                    
+                    ticketsContainer.classList.add('show');
+                })
+                .catch(error => {
+                    console.error('Error loading tickets:', error);
+                    ticketsContainer.innerHTML = 
+                        '<div class="alert alert-danger">Error loading tickets. Please try again.</div>';
+                });
+        }
+
+        // Create ticket element
+        function createTicketElement(ticket) {
+            const ticketDiv = document.createElement('div');
+            ticketDiv.className = 'ticket-item';
+            ticketDiv.innerHTML = `
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h5 class="mb-1">${ticket.title}</h5>
+                        <p class="text-muted mb-2">${ticket.description}</p>
+                    </div>
+                    <div class="text-end">
+                        <span class="badge bg-${getStatusColor(ticket.status)}">${ticket.status}</span>
+                        <div><small class="text-muted">Created: ${ticket.created_at}</small></div>
+                        ${ticket.resolved_at ? `<div><small class="text-muted">Resolved: ${ticket.resolved_at}</small></div>` : ''}
+                    </div>
+                </div>
+                <div class="ticket-history">
+                    ${createHistoryHTML(ticket.history)}
+                </div>
+            `;
+            return ticketDiv;
+        }
+
+        // Create history HTML
+        function createHistoryHTML(history) {
+            if (!history || history.length === 0) {
+                return '<p class="text-muted">No history available</p>';
+            }
+
+            return history.map(item => `
+                <div class="history-item">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-${getActionIcon(item.action)} me-2"></i>
+                        <strong>${item.action}</strong>
+                    </div>
+                    <div class="ms-4">
+                        <small class="text-muted">By ${item.performed_by}</small>
+                        <div><small class="text-muted">${item.performed_at}</small></div>
+                        ${item.notes ? `<div class="mt-1"><small>${item.notes}</small></div>` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Get action icon
+        function getActionIcon(action) {
+            const icons = {
+                'Submitted': 'plus-circle',
+                'Updated': 'pencil',
+                'Assigned': 'person-plus',
+                'Closed': 'check-circle',
+                'Reopened': 'arrow-counterclockwise',
+                'Transferred': 'arrow-left-right'
+            };
+            return icons[action] || 'info-circle';
+        }
+
+        // Get status color
+        function getStatusColor(status) {
+            const colors = {
+                'open': 'primary',
+                'in-progress': 'warning',
+                'transferred': 'info',
+                'closed': 'success'
+            };
+            return colors[status.toLowerCase()] || 'secondary';
+        }
+
+        // Setup search functionality
+        function setupSearch() {
+            const searchInput = document.getElementById('userSearch');
+            searchInput.addEventListener('input', (e) => {
+                const searchTerm = e.target.value.toLowerCase();
+                const userCards = document.querySelectorAll('.user-card');
+                
+                userCards.forEach(card => {
+                    const userName = card.querySelector('h4').textContent.toLowerCase();
+                    const userEmail = card.querySelector('p').textContent.toLowerCase();
+                    const userRegion = card.querySelector('.badge.bg-secondary').textContent.toLowerCase();
+                    
+                    if (userName.includes(searchTerm) || 
+                        userEmail.includes(searchTerm) || 
+                        userRegion.includes(searchTerm)) {
+                        card.style.display = 'block';
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+            });
+        }
+
+        // Theme toggle functionality
+        const themeToggle = document.getElementById('themeToggle');
+        themeToggle.addEventListener('click', () => {
+            const isDark = document.body.classList.toggle('dark-theme');
+            const icon = themeToggle.querySelector('i');
+            
+            if (isDark) {
+                icon.classList.replace('bi-moon', 'bi-sun');
+                localStorage.setItem('theme', 'dark');
+            } else {
+                icon.classList.replace('bi-sun', 'bi-moon');
+                localStorage.setItem('theme', 'light');
+            }
+        });
+    </script>
+</body>
+</html> 

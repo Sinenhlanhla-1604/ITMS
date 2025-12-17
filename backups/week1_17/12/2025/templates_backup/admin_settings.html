@@ -1,0 +1,1810 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>TTAH - Admin Settings</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/admin-style.css') }}" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+    <style>
+        .logo {
+      width: 150px; /* A bit smaller for the nav bar */
+      height: auto;
+      padding: 10px;
+      vertical-align: middle;
+      margin-right: 10px;
+    }
+        .sidebar-header {
+          text-align: center;
+        }
+        .settings-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .settings-section {
+            background: var(--card-bg);
+            border-radius: 0.35rem;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-color);
+        }
+        
+        .settings-section h3 {
+            color: var(--text-color);
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .admin-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .admin-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 0.35rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+        
+        .admin-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+        
+        .admin-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .admin-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--button-text);
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+        
+        .admin-details h5 {
+            margin: 0;
+            color: var(--text-color);
+            font-weight: 600;
+        }
+        
+        .admin-details p {
+            margin: 0.25rem 0 0 0;
+            color: var(--text-color);
+            opacity: 0.8;
+            font-size: 0.9rem;
+        }
+        
+        .admin-details small {
+            color: var(--text-color);
+            opacity: 0.6;
+            font-size: 0.8rem;
+        }
+        
+        .admin-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .stat-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 0.35rem;
+            padding: 1.5rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+        
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+        
+        .stat-label {
+            color: var(--text-color);
+            font-weight: 500;
+        }
+        
+        .form-container {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 0.35rem;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .form-container h4 {
+            color: var(--text-color);
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+        
+        .required::after {
+            content: " *";
+            color: var(--danger-color);
+        }
+        
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(2px);
+        }
+        
+        .modal-content {
+            background-color: var(--card-bg);
+            margin: 5% auto;
+            padding: 0;
+            border: 1px solid var(--border-color);
+            border-radius: 0.35rem;
+            width: 90%;
+            max-width: 600px;
+            box-shadow: var(--shadow);
+            animation: modalSlideIn 0.3s ease-out;
+        }
+        
+        @keyframes modalSlideIn {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        .modal-header {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: var(--card-bg);
+            border-radius: 0.35rem 0.35rem 0 0;
+        }
+        
+        .modal-header h3 {
+            margin: 0;
+            color: var(--text-color);
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+        
+        .modal-body {
+            padding: 1.5rem;
+            background-color: var(--card-bg);
+            border-radius: 0 0 0.35rem 0.35rem;
+        }
+        
+        .close {
+            color: var(--text-color);
+            font-size: 1.5rem;
+            font-weight: bold;
+            cursor: pointer;
+            opacity: 0.7;
+            background: none;
+            border: none;
+            padding: 0;
+            line-height: 1;
+            transition: all 0.3s ease;
+        }
+        
+        .close:hover {
+            opacity: 1;
+            color: var(--primary-color);
+            transform: scale(1.1);
+        }
+        
+        .form-actions {
+            margin-top: 1.5rem;
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border-color);
+        }
+        
+        /* Announcement specific styles to match admin-style.css */
+        .announcement-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 0.35rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .announcement-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+        
+        .dark-theme .announcement-card {
+            color: var(--text-color);
+        }
+        
+        .dark-theme .announcement-card .text-muted {
+            color: var(--text-color) !important;
+            opacity: 0.6;
+        }
+        
+        /* Form group styles to match admin-style.css */
+        .form-group {
+            margin-bottom: 1.5rem;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-color);
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+        
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: 0.35rem;
+            background-color: var(--card-bg);
+            color: var(--text-color);
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+        
+        .form-group input[type="checkbox"] {
+            width: auto;
+            height: auto;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.2rem rgba(78, 115, 223, 0.25);
+            background-color: var(--card-bg);
+        }
+        
+        .form-group input::placeholder,
+        .form-group textarea::placeholder {
+            color: var(--text-color);
+            opacity: 0.6;
+        }
+        
+        /* Select dropdown styling */
+        .form-group select {
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='%23666' viewBox='0 0 16 16'%3e%3cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 0.75rem center;
+            background-size: 0.8rem;
+            padding-right: 2.5rem;
+        }
+        
+        /* Dark theme select arrow */
+        .dark-theme .form-group select {
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='white' viewBox='0 0 16 16'%3e%3cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3e%3c/svg%3e");
+        }
+        
+        /* Button styles to match admin-style.css */
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 0.35rem;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 100px;
+            gap: 0.5rem;
+            white-space: nowrap;
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: var(--button-text);
+        }
+        
+        .btn-primary:hover {
+            background-color: #2e59d9;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(78, 115, 223, 0.3);
+        }
+        
+        .btn-secondary {
+            background-color: var(--secondary-color);
+            color: var(--button-text);
+        }
+        
+        .btn-secondary:hover {
+            background-color: #6c757d;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(108, 117, 125, 0.3);
+        }
+        
+        .btn-info {
+            background-color: var(--info-color);
+            color: var(--button-text);
+        }
+        
+        .btn-info:hover {
+            background-color: #2a96a5;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(54, 185, 204, 0.3);
+        }
+        
+        .btn-warning {
+            background-color: var(--warning-color);
+            color: var(--button-text);
+        }
+        
+        .btn-warning:hover {
+            background-color: #e0a800;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(246, 194, 62, 0.3);
+        }
+        
+        .btn-danger {
+            background-color: var(--danger-color);
+            color: var(--button-text);
+        }
+        
+        .btn-danger:hover {
+            background-color: #be2617;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(231, 74, 59, 0.3);
+        }
+        
+        .btn-outline-primary {
+            background-color: transparent;
+            border: 1px solid var(--primary-color);
+            color: var(--primary-color);
+        }
+        
+        .btn-outline-primary:hover {
+            background-color: var(--primary-color);
+            color: var(--button-text);
+        }
+        
+        .btn-outline-danger {
+            background-color: transparent;
+            border: 1px solid var(--danger-color);
+            color: var(--danger-color);
+        }
+        
+        .btn-outline-danger:hover {
+            background-color: var(--danger-color);
+            color: var(--button-text);
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: none !important;
+        }
+        
+        /* Form group button styling */
+        .form-group .btn {
+            width: 100%;
+            margin-top: 0.5rem;
+        }
+        
+        /* Table styles for database health modal */
+        .table {
+            border-color: var(--border-color);
+        }
+        
+        .table > :not(caption) > * > * {
+            padding: .75rem;
+            background-color: var(--card-bg);
+            border-bottom-width: 1px;
+            color: var(--text-color);
+        }
+
+        .dark-theme .table > :not(caption) > * > * {
+            background-color: var(--card-bg);
+        }
+        
+        .dark-theme .table-hover > tbody > tr:hover > * {
+            background-color: rgba(78, 115, 223, 0.1);
+            color: var(--text-color);
+        }
+
+        /* Alert styles */
+        .alert {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            padding: 1rem;
+            border-radius: 0.35rem;
+            margin-bottom: 1rem;
+        }
+        
+        .alert-success {
+            border-left: 4px solid var(--success-color);
+            background-color: rgba(28, 200, 138, 0.1);
+        }
+        
+        .alert-danger {
+            border-left: 4px solid var(--danger-color);
+            background-color: rgba(231, 74, 59, 0.1);
+        }
+        
+        .alert-info {
+            border-left: 4px solid var(--info-color);
+            background-color: rgba(54, 185, 204, 0.1);
+        }
+        
+        /* Dark theme alert adjustments */
+        .dark-theme .alert-success {
+            background-color: rgba(28, 200, 138, 0.2);
+        }
+        
+        .dark-theme .alert-danger {
+            background-color: rgba(231, 74, 59, 0.2);
+        }
+        
+        .dark-theme .alert-info {
+            background-color: rgba(54, 185, 204, 0.2);
+        }
+        
+        /* Badge styles */
+        .badge {
+            padding: 0.5em 0.75em;
+            font-weight: 500;
+            border-radius: 0.25rem;
+        }
+        
+        .bg-success {
+            background-color: var(--success-color) !important;
+            color: var(--button-text) !important;
+        }
+        
+        .bg-secondary {
+            background-color: var(--secondary-color) !important;
+            color: var(--button-text) !important;
+        }
+        
+        .bg-info {
+            background-color: var(--info-color) !important;
+            color: var(--button-text) !important;
+        }
+        
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .settings-container {
+                padding: 1rem;
+            }
+            
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            }
+            
+            .admin-card {
+                flex-direction: column;
+                gap: 1rem;
+                text-align: center;
+            }
+            
+            .admin-actions {
+                justify-content: center;
+            }
+            
+            .modal-content {
+                width: 95%;
+                margin: 10% auto;
+            }
+            
+            .form-actions {
+                flex-direction: column;
+            }
+            
+            .btn {
+                width: 100%;
+            }
+        }
+        
+        /* Backup & Maintenance section styling */
+        .backup-maintenance-section .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .backup-maintenance-section .form-group label {
+            display: block;
+            margin-bottom: 0.75rem;
+            color: var(--text-color);
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+        
+        .backup-maintenance-section .btn {
+            width: 100%;
+            padding: 1rem 1.5rem;
+            font-size: 0.95rem;
+            font-weight: 600;
+            border-radius: 0.5rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .backup-maintenance-section .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+        
+        .backup-maintenance-section .btn:active {
+            transform: translateY(0);
+        }
+        
+        .backup-maintenance-section .btn i {
+            margin-right: 0.5rem;
+            font-size: 1.1rem;
+        }
+        
+        /* Dark theme adjustments for backup section */
+        .dark-theme .backup-maintenance-section .btn {
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .dark-theme .backup-maintenance-section .btn:hover {
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+        }
+
+        .top-nav {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding: 1rem;
+            background-color: var(--card-bg);
+            border-radius: 0.35rem;
+            box-shadow: var(--shadow);
+        }
+        .user-menu {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-left: auto;
+        }
+        .admin-profile {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .admin-name {
+            color: var(--text-color);
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+        .admin-profile img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 2px solid var(--primary-color);
+            transition: all 0.3s ease;
+        }
+        .admin-profile img:hover {
+            transform: scale(1.05);
+            border-color: var(--sidebar-hover);
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-wrapper">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <img src="{{ url_for('static', filename='img/ttah_logo.png') }}" alt="BCM Logo" class="logo">
+                <h3>Admin Panel</h3>
+            </div>
+            <ul class="sidebar-menu">
+                <li>
+                    <a href="/admin/dashboard"><i class="bi bi-speedometer2"></i> Dashboard</a>
+                </li>
+                <li>
+                    <a href="/admin/users"><i class="bi bi-people"></i> Users</a>
+                </li>
+                <li class="active">
+                    <a href="/admin/settings"><i class="bi bi-gear"></i> Settings</a>
+                </li>
+            </ul>
+            <div class="theme-toggle">
+                <button id="themeToggle"><i class="bi bi-moon"></i></button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Flash Messages Container -->
+            <div id="flash-messages" class="flash-messages">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="flash-message {{ category }}" data-category="{{ category }}">
+                                <span>{{ message }}</span>
+                                <button type="button" class="close-btn" onclick="dismissFlash(this.parentElement)">&times;</button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+            </div>
+
+            <!-- Top Navigation -->
+            <nav class="top-nav">
+                <div class="user-menu">
+                    <div class="admin-profile">
+                        <span class="admin-name">{{ session.name }}</span>
+                        <img src="https://ui-avatars.com/api/?name={{ session.name }}&background=4e73df&color=fff" alt="Admin Profile" />
+                    </div>
+                    <a href="/logout" class="btn btn-outline-primary btn-sm">Logout</a>
+                </div>
+            </nav>
+
+            <div class="settings-container">
+                <!-- System Overview -->
+                <div class="settings-section">
+                    <h3><i class="bi bi-info-circle"></i> System Overview</h3>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-number" id="totalUsers">{{ total_users }}</div>
+                            <div class="stat-label">Total Users</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number" id="totalAdmins">{{ total_admins }}</div>
+                            <div class="stat-label">Administrators</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number" id="totalTickets">{{ total_tickets }}</div>
+                            <div class="stat-label">Total Tickets</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number" id="activeAnnouncements">{{ active_announcements }}</div>
+                            <div class="stat-label">Active Announcements</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Admin Management -->
+                <div class="settings-section">
+                    <h3><i class="bi bi-shield-check"></i> Administrator Management</h3>
+                    
+                    <!-- Add New Admin Form -->
+                    <div class="form-container" style="margin-bottom: 2rem;">
+                        <h4>Add New Administrator</h4>
+                        <form id="addAdminForm">
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="adminName" class="required">First Name</label>
+                                    <input type="text" id="adminName" name="name" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="adminSurname" class="required">Last Name</label>
+                                    <input type="text" id="adminSurname" name="surname" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="adminEmail" class="required">Email</label>
+                                    <input type="email" id="adminEmail" name="email" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="adminRegion" class="required">Region</label>
+                                    <select id="adminRegion" name="region" required>
+                                        <option value="">Select Region</option>
+                                        {% for region in regions %}
+                                            <option value="{{ region }}">{{ region }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="adminPassword" class="required">Password</label>
+                                    <input type="password" id="adminPassword" name="password" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="adminRole" class="required">Role</label>
+                                    <select id="adminRole" name="role" required>
+                                        <option value="admin">Admin</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-plus-circle"></i> Add Administrator
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Current Administrators -->
+                    <div>
+                        <h4>Current Administrators</h4>
+                        <div class="admin-list" id="adminList">
+                            <!-- Admin cards will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- System Configuration -->
+                <div class="settings-section">
+                    <h3><i class="bi bi-sliders"></i> System Configuration</h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="defaultTicketStatus">Default Ticket Status</label>
+                            <select id="defaultTicketStatus">
+                                <option value="open">Open</option>
+                                <option value="in-progress">In Progress</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="autoCloseDays">Auto-close Days (Inactive Tickets)</label>
+                            <input type="number" id="autoCloseDays" min="1" max="365" value="30">
+                        </div>
+                        <div class="form-group">
+                            <label for="maxFileSize">Maximum File Upload Size (MB)</label>
+                            <input type="number" id="maxFileSize" min="1" max="100" value="10">
+                        </div>
+                        <div class="form-group">
+                            <label for="sessionTimeout">Session Timeout (Minutes)</label>
+                            <input type="number" id="sessionTimeout" min="15" max="1440" value="120">
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-primary" onclick="saveSystemConfig()">
+                            <i class="bi bi-save"></i> Save Configuration
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Announcement Management -->
+                <div class="settings-section">
+                    <h3><i class="bi bi-megaphone"></i> Announcement Management</h3>
+                    <button class="btn btn-primary" onclick="showAnnouncementModal()">
+                        <i class="bi bi-plus-circle"></i> Create New Announcement
+                    </button>
+                    <div id="announcementsList" style="margin-top: 1rem;">
+                        <!-- Announcements will be loaded here -->
+                    </div>
+                </div>
+
+                <!-- Backup & Maintenance -->
+                <div class="settings-section">
+                    <h3><i class="bi bi-database"></i> Backup & Maintenance</h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Database Health Check</label>
+                            <button class="btn btn-info" onclick="checkDatabaseHealth()">
+                                <i class="bi bi-heart-pulse"></i> Check Database Health
+                            </button>
+                        </div>
+                        <div class="form-group">
+                            <label>Database Backup</label>
+                            <button class="btn btn-secondary" onclick="createBackup()">
+                                <i class="bi bi-download"></i> Create Backup
+                            </button>
+                        </div>
+                        <div class="form-group">
+                            <label>System Cleanup</label>
+                            <button class="btn btn-warning" onclick="runCleanup()">
+                                <i class="bi bi-trash"></i> Clean Old Data
+                            </button>
+                        </div>
+                        <div class="form-group">
+                            <label>Cache Clear</label>
+                            <button class="btn btn-info" onclick="clearCache()">
+                                <i class="bi bi-arrow-clockwise"></i> Clear Cache
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Add Admin Modal -->
+    <div id="addAdminModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Add New Administrator</h3>
+                <span class="close" onclick="closeAddAdminModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="modalAddAdminForm">
+                    <div class="form-group">
+                        <label for="modalAdminName" class="required">First Name</label>
+                        <input type="text" id="modalAdminName" name="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="modalAdminSurname" class="required">Last Name</label>
+                        <input type="text" id="modalAdminSurname" name="surname" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="modalAdminEmail" class="required">Email</label>
+                        <input type="email" id="modalAdminEmail" name="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="modalAdminRegion" class="required">Region</label>
+                        <select id="modalAdminRegion" name="region" required>
+                            <option value="">Select Region</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="modalAdminPassword" class="required">Password</label>
+                        <input type="password" id="modalAdminPassword" name="password" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="modalAdminRole" class="required">Role</label>
+                        <select id="modalAdminRole" name="role" required>
+                            <option value="admin">Admin</option>
+                        </select>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" onclick="closeAddAdminModal()" class="btn btn-secondary">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Add Administrator</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Admin Modal -->
+    <div id="editAdminModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Edit Administrator</h3>
+                <span class="close" onclick="closeEditAdminModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="editAdminForm">
+                    <input type="hidden" id="editAdminId" name="user_id">
+                    <div class="form-group">
+                        <label for="editAdminName" class="required">First Name</label>
+                        <input type="text" id="editAdminName" name="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editAdminSurname" class="required">Last Name</label>
+                        <input type="text" id="editAdminSurname" name="surname" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editAdminEmail" class="required">Email</label>
+                        <input type="email" id="editAdminEmail" name="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editAdminRegion" class="required">Region</label>
+                        <select id="editAdminRegion" name="region" required>
+                            <option value="">Select Region</option>
+                            {% for region in regions %}
+                                <option value="{{ region }}">{{ region }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="editAdminPassword">Password (leave blank to keep current)</label>
+                        <input type="password" id="editAdminPassword" name="password" placeholder="Enter new password or leave blank">
+                    </div>
+                    <div class="form-group">
+                        <label for="editAdminRole" class="required">Role</label>
+                        <select id="editAdminRole" name="role" required>
+                            <option value="admin">Admin</option>
+                        </select>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" onclick="closeEditAdminModal()" class="btn btn-secondary">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Update Administrator</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Initialize the page
+        document.addEventListener('DOMContentLoaded', () => {
+            // Check for saved theme preference
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'dark') {
+                document.body.classList.add('dark-theme');
+                document.getElementById('themeToggle').querySelector('i').classList.replace('bi-moon', 'bi-sun');
+            }
+            
+            loadAdmins();
+            loadAnnouncements();
+            loadSystemConfig();
+            
+            // Start auto-dismiss for flash messages
+            autoDismissFlash();
+            
+            // Add form submission handlers
+            document.getElementById('addAdminForm').addEventListener('submit', handleAddAdmin);
+            document.getElementById('editAdminForm').addEventListener('submit', handleEditAdmin);
+        });
+
+        // Load administrators
+        function loadAdmins() {
+            fetch('/api/admin/administrators')
+                .then(response => response.json())
+                .then(data => {
+                    const adminList = document.getElementById('adminList');
+                    adminList.innerHTML = '';
+                    
+                    if (data.admins && data.admins.length > 0) {
+                        data.admins.forEach(admin => {
+                            const adminCard = createAdminCard(admin);
+                            adminList.appendChild(adminCard);
+                        });
+                    } else {
+                        adminList.innerHTML = '<p>No administrators found.</p>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading admins:', error);
+                    document.getElementById('adminList').innerHTML = '<p>Error loading administrators.</p>';
+                });
+        }
+
+        // Create admin card
+        function createAdminCard(admin) {
+            const card = document.createElement('div');
+            card.className = 'admin-card';
+            
+            const initials = `${admin.name.charAt(0)}${admin.surname.charAt(0)}`.toUpperCase();
+            const createdDate = admin.created_at ? new Date(admin.created_at).toLocaleDateString() : 'Unknown';
+            
+            card.innerHTML = `
+                <div class="admin-info">
+                    <div class="admin-avatar">${initials}</div>
+                    <div class="admin-details">
+                        <h5>${admin.name} ${admin.surname}</h5>
+                        <p>${admin.email} • ${admin.role.replace('_', ' ')} • ${admin.region}</p>
+                        <small>Created: ${createdDate}</small>
+                    </div>
+                </div>
+                <div class="admin-actions">
+                    <button class="btn btn-sm btn-outline-primary" onclick="editAdmin(${admin.user_id})">
+                        <i class="bi bi-pencil"></i> Edit
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="removeAdmin(${admin.user_id})">
+                        <i class="bi bi-trash"></i> Remove
+                    </button>
+                </div>
+            `;
+            
+            return card;
+        }
+
+        // Handle add admin form submission
+        function handleAddAdmin(event) {
+            event.preventDefault();
+            
+            const formData = new FormData(event.target);
+            const adminData = {
+                name: formData.get('name'),
+                surname: formData.get('surname'),
+                email: formData.get('email'),
+                region: formData.get('region'),
+                password: formData.get('password'),
+                role: formData.get('role')
+            };
+            
+            addAdmin(adminData);
+        }
+
+        // Add new administrator
+        function addAdmin(adminData) {
+            fetch('/api/admin/administrators', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(adminData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showFlashMessage('Administrator added successfully!', 'success');
+                    document.getElementById('addAdminForm').reset();
+                    loadAdmins();
+                } else {
+                    showFlashMessage(data.error || 'Failed to add administrator', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error adding admin:', error);
+                showFlashMessage('Error adding administrator', 'error');
+            });
+        }
+
+        // Edit administrator
+        function editAdmin(userId) {
+            // Find the admin data from the current list
+            fetch('/api/admin/administrators')
+                .then(response => response.json())
+                .then(data => {
+                    const admin = data.admins.find(a => a.user_id === userId);
+                    if (admin) {
+                        // Populate the edit modal
+                        document.getElementById('editAdminId').value = admin.user_id;
+                        document.getElementById('editAdminName').value = admin.name;
+                        document.getElementById('editAdminSurname').value = admin.surname;
+                        document.getElementById('editAdminEmail').value = admin.email;
+                        document.getElementById('editAdminRegion').value = admin.region;
+                        document.getElementById('editAdminRole').value = admin.role;
+                        document.getElementById('editAdminPassword').value = ''; // Clear password field
+                        
+                        // Show the modal
+                        document.getElementById('editAdminModal').style.display = 'block';
+                    } else {
+                        showFlashMessage('Administrator not found', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading admin data:', error);
+                    showFlashMessage('Error loading administrator data', 'error');
+                });
+        }
+
+        // Handle edit admin form submission
+        function handleEditAdmin(event) {
+            event.preventDefault();
+            
+            const formData = new FormData(event.target);
+            const adminData = {
+                name: formData.get('name'),
+                surname: formData.get('surname'),
+                email: formData.get('email'),
+                region: formData.get('region'),
+                role: formData.get('role')
+            };
+            
+            // Only include password if it's not empty
+            const password = formData.get('password');
+            if (password && password.trim() !== '') {
+                adminData.password = password;
+            }
+            
+            const userId = formData.get('user_id');
+            updateAdmin(userId, adminData);
+        }
+
+        // Update administrator
+        function updateAdmin(userId, adminData) {
+            fetch(`/api/admin/administrators/${userId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(adminData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showFlashMessage('Administrator updated successfully!', 'success');
+                    closeEditAdminModal();
+                    loadAdmins();
+                } else {
+                    showFlashMessage(data.error || 'Failed to update administrator', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error updating admin:', error);
+                showFlashMessage('Error updating administrator', 'error');
+            });
+        }
+
+        // Remove administrator
+        function removeAdmin(userId) {
+            if (confirm('Are you sure you want to remove this administrator? This action cannot be undone.')) {
+                fetch(`/api/admin/administrators/${userId}`, {
+                    method: 'DELETE'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showFlashMessage('Administrator removed successfully!', 'success');
+                        loadAdmins();
+                    } else {
+                        showFlashMessage(data.error || 'Failed to remove administrator', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error removing admin:', error);
+                    showFlashMessage('Error removing administrator', 'error');
+                });
+            }
+        }
+
+        // Close edit admin modal
+        function closeEditAdminModal() {
+            document.getElementById('editAdminModal').style.display = 'none';
+            document.getElementById('editAdminForm').reset();
+        }
+
+        // Close add admin modal
+        function closeAddAdminModal() {
+            document.getElementById('addAdminModal').style.display = 'none';
+            document.getElementById('modalAddAdminForm').reset();
+        }
+
+        // Show announcement modal
+        function showAnnouncementModal() {
+            // Create a simple modal for new announcements
+            const modal = document.createElement('div');
+            modal.className = 'modal';
+            modal.id = 'newAnnouncementModal';
+            modal.style.display = 'block';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>Create New Announcement</h3>
+                        <span class="close" onclick="closeAnnouncementModal('newAnnouncementModal')">&times;</span>
+                    </div>
+                    <div class="modal-body">
+                        <form id="newAnnouncementForm">
+                            <div class="form-group">
+                                <label for="announcementTitle" class="required">Title</label>
+                                <input type="text" id="announcementTitle" name="title" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="announcementContent" class="required">Content</label>
+                                <textarea id="announcementContent" name="content" rows="4" required></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="announcementTarget" class="required">Target Audience</label>
+                                <select id="announcementTarget" name="target_audience" required>
+                                    <option value="">Select Target</option>
+                                    <option value="all">All Users</option>
+                                    <option value="users">Users Only</option>
+                                    <option value="assignees">Assignees Only</option>
+                                </select>
+                            </div>
+                            <div class="form-actions">
+                                <button type="button" onclick="closeAnnouncementModal('newAnnouncementModal')" class="btn btn-secondary">Cancel</button>
+                                <button type="submit" class="btn btn-primary">Create Announcement</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            
+            // Add form submission handler
+            document.getElementById('newAnnouncementForm').addEventListener('submit', handleCreateAnnouncement);
+        }
+
+        // Close announcement modal
+        function closeAnnouncementModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.remove();
+            } else {
+                // Fallback: try to find modal by class if ID is not provided
+                const modalElement = document.querySelector('.modal');
+                if (modalElement) {
+                    modalElement.remove();
+                }
+            }
+        }
+
+        // Handle create announcement
+        function handleCreateAnnouncement(event) {
+            event.preventDefault();
+            
+            const formData = new FormData(event.target);
+            const announcementData = {
+                title: formData.get('title'),
+                content: formData.get('content'),
+                target_audience: formData.get('target_audience'),
+                is_active: true
+            };
+            
+            createAnnouncement(announcementData);
+        }
+
+        // Create announcement
+        function createAnnouncement(announcementData) {
+            fetch('/api/admin/announcements', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(announcementData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showFlashMessage('Announcement created successfully!', 'success');
+                    // Remove the modal using specific ID
+                    closeAnnouncementModal('newAnnouncementModal');
+                    loadAnnouncements();
+                } else {
+                    showFlashMessage(data.error || 'Failed to create announcement', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error creating announcement:', error);
+                showFlashMessage('Error creating announcement', 'error');
+            });
+        }
+
+        // Edit announcement
+        function editAnnouncement(announcementId) {
+            // Find the announcement data
+            fetch('/api/admin/announcements')
+                .then(response => response.json())
+                .then(data => {
+                    const announcement = data.announcements.find(a => a.announcement_id === announcementId);
+                    if (announcement) {
+                        showEditAnnouncementModal(announcement);
+                    } else {
+                        showFlashMessage('Announcement not found', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading announcement data:', error);
+                    showFlashMessage('Error loading announcement data', 'error');
+                });
+        }
+
+        // Show edit announcement modal
+        function showEditAnnouncementModal(announcement) {
+            const modal = document.createElement('div');
+            modal.className = 'modal';
+            modal.id = 'editAnnouncementModal';
+            modal.style.display = 'block';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>Edit Announcement</h3>
+                        <span class="close" onclick="closeAnnouncementModal('editAnnouncementModal')">&times;</span>
+                    </div>
+                    <div class="modal-body">
+                        <form id="editAnnouncementForm">
+                            <input type="hidden" name="announcement_id" value="${announcement.announcement_id}">
+                            <div class="form-group">
+                                <label for="editAnnouncementTitle" class="required">Title</label>
+                                <input type="text" id="editAnnouncementTitle" name="title" value="${announcement.title}" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="editAnnouncementContent" class="required">Content</label>
+                                <textarea id="editAnnouncementContent" name="content" rows="4" required>${announcement.content}</textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="editAnnouncementTarget" class="required">Target Audience</label>
+                                <select id="editAnnouncementTarget" name="target_audience" required>
+                                    <option value="all" ${announcement.target_audience === 'all' ? 'selected' : ''}>All Users</option>
+                                    <option value="users" ${announcement.target_audience === 'users' ? 'selected' : ''}>Users Only</option>
+                                    <option value="assignees" ${announcement.target_audience === 'assignees' ? 'selected' : ''}>Assignees Only</option>
+                                    <option value="admins" ${announcement.target_audience === 'admins' ? 'selected' : ''}>Administrators Only</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="editAnnouncementActive">Active</label>
+                                <input type="checkbox" id="editAnnouncementActive" name="is_active" ${announcement.active ? 'checked' : ''}>
+                            </div>
+                            <div class="form-actions">
+                                <button type="button" onclick="closeAnnouncementModal('editAnnouncementModal')" class="btn btn-secondary">Cancel</button>
+                                <button type="submit" class="btn btn-primary">Update Announcement</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            
+            // Add form submission handler
+            document.getElementById('editAnnouncementForm').addEventListener('submit', handleEditAnnouncement);
+        }
+
+        // Handle edit announcement
+        function handleEditAnnouncement(event) {
+            event.preventDefault();
+            
+            const formData = new FormData(event.target);
+            const announcementData = {
+                title: formData.get('title'),
+                content: formData.get('content'),
+                target_audience: formData.get('target_audience'),
+                is_active: formData.has('is_active')
+            };
+            
+            const announcementId = formData.get('announcement_id');
+            updateAnnouncement(announcementId, announcementData);
+        }
+
+        // Update announcement
+        function updateAnnouncement(announcementId, announcementData) {
+            fetch(`/api/admin/announcements/${announcementId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(announcementData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showFlashMessage('Announcement updated successfully!', 'success');
+                    // Remove the modal using specific ID
+                    closeAnnouncementModal('editAnnouncementModal');
+                    loadAnnouncements();
+                } else {
+                    showFlashMessage(data.error || 'Failed to update announcement', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error updating announcement:', error);
+                showFlashMessage('Error updating announcement', 'error');
+            });
+        }
+
+        // Delete announcement
+        function deleteAnnouncement(announcementId) {
+            if (confirm('Are you sure you want to delete this announcement? This action cannot be undone.')) {
+                fetch(`/api/admin/announcements/${announcementId}`, {
+                    method: 'DELETE'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showFlashMessage('Announcement deleted successfully!', 'success');
+                        loadAnnouncements();
+                    } else {
+                        showFlashMessage(data.error || 'Failed to delete announcement', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error deleting announcement:', error);
+                    showFlashMessage('Error deleting announcement', 'error');
+                });
+            }
+        }
+
+        // Load announcements
+        function loadAnnouncements() {
+            fetch('/api/admin/announcements')
+                .then(response => response.json())
+                .then(data => {
+                    const announcementsList = document.getElementById('announcementsList');
+                    announcementsList.innerHTML = '';
+                    
+                    if (data.announcements && data.announcements.length > 0) {
+                        data.announcements.forEach(announcement => {
+                            const announcementDiv = createAnnouncementDiv(announcement);
+                            announcementsList.appendChild(announcementDiv);
+                        });
+                    } else {
+                        announcementsList.innerHTML = '<p>No announcements found.</p>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading announcements:', error);
+                });
+        }
+
+        // Create announcement div
+        function createAnnouncementDiv(announcement) {
+            const div = document.createElement('div');
+            div.className = 'announcement-card';
+            
+            const statusBadge = announcement.active ? 
+                '<span class="badge bg-success">Active</span>' : 
+                '<span class="badge bg-secondary">Inactive</span>';
+            
+            div.innerHTML = `
+                <div style="width: 100%;">
+                    <div class="admin-info">
+                        <div class="admin-details">
+                            <h5>${announcement.title}</h5>
+                            <p>${announcement.content}</p>
+                        </div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; flex-wrap: wrap; gap: 1rem;">
+                        <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                            <span class="badge bg-info">${announcement.target_audience}</span>
+                            ${statusBadge}
+                            <small class="text-muted ms-2">Created: ${announcement.created_at ? new Date(announcement.created_at).toLocaleDateString() : 'Unknown'}</small>
+                        </div>
+                        <div class="admin-actions">
+                            <button class="btn btn-sm btn-outline-primary" onclick="editAnnouncement(${announcement.announcement_id})">
+                                <i class="bi bi-pencil"></i> Edit
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteAnnouncement(${announcement.announcement_id})">
+                                <i class="bi bi-trash"></i> Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            return div;
+        }
+
+        // Load system configuration
+        function loadSystemConfig() {
+            fetch('/api/admin/system-config')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.config) {
+                        document.getElementById('defaultTicketStatus').value = data.config.default_ticket_status || 'open';
+                        document.getElementById('autoCloseDays').value = data.config.auto_close_days || 30;
+                        document.getElementById('maxFileSize').value = data.config.max_file_size || 10;
+                        document.getElementById('sessionTimeout').value = data.config.session_timeout || 120;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading system config:', error);
+                });
+        }
+
+        // Save system configuration
+        function saveSystemConfig() {
+            const config = {
+                default_ticket_status: document.getElementById('defaultTicketStatus').value,
+                auto_close_days: parseInt(document.getElementById('autoCloseDays').value),
+                max_file_size: parseInt(document.getElementById('maxFileSize').value),
+                session_timeout: parseInt(document.getElementById('sessionTimeout').value)
+            };
+            
+            fetch('/api/admin/system-config', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(config)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showFlashMessage('System configuration saved successfully!', 'success');
+                    
+                    // Show additional message if session timeout was changed
+                    const currentTimeout = parseInt(document.getElementById('sessionTimeout').value);
+                    if (currentTimeout !== 120) { // Assuming 120 is the default
+                        setTimeout(() => {
+                            showFlashMessage(`Session timeout updated to ${currentTimeout} minutes. New sessions will use this timeout.`, 'info');
+                        }, 1000);
+                    }
+                } else {
+                    showFlashMessage(data.error || 'Failed to save configuration', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error saving config:', error);
+                showFlashMessage('Error saving configuration', 'error');
+            });
+        }
+
+        // Backup and maintenance functions
+        function createBackup() {
+            // Show loading state
+            const backupBtn = document.querySelector('button[onclick="createBackup()"]');
+            const originalText = backupBtn.innerHTML;
+            backupBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Creating Backup...';
+            backupBtn.disabled = true;
+            
+            fetch('/api/admin/backup', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showFlashMessage(data.message, 'success');
+                        // Show additional backup details if available
+                        if (data.filename && data.size_mb) {
+                            setTimeout(() => {
+                                showFlashMessage(`Backup file: ${data.filename} (${data.size_mb} MB)`, 'info');
+                            }, 1000);
+                        }
+                    } else {
+                        showFlashMessage(data.error || 'Failed to create backup', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error creating backup:', error);
+                    showFlashMessage('Error creating backup', 'error');
+                })
+                .finally(() => {
+                    // Restore button state
+                    backupBtn.innerHTML = originalText;
+                    backupBtn.disabled = false;
+                });
+        }
+
+        function runCleanup() {
+            if (confirm('This will clean old data. Are you sure?')) {
+                fetch('/api/admin/cleanup', { method: 'POST' })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            showFlashMessage('Cleanup completed successfully!', 'success');
+                        } else {
+                            showFlashMessage(data.error || 'Failed to run cleanup', 'error');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error running cleanup:', error);
+                        showFlashMessage('Error running cleanup', 'error');
+                    });
+            }
+        }
+
+        function clearCache() {
+            // Show loading state
+            const cacheBtn = document.querySelector('button[onclick="clearCache()"]');
+            const originalText = cacheBtn.innerHTML;
+            cacheBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Clearing Cache...';
+            cacheBtn.disabled = true;
+            
+            fetch('/api/admin/clear-cache', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showFlashMessage(data.message, 'success');
+                    } else {
+                        showFlashMessage(data.error || 'Failed to clear cache', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error clearing cache:', error);
+                    showFlashMessage('Error clearing cache', 'error');
+                })
+                .finally(() => {
+                    // Restore button state
+                    cacheBtn.innerHTML = originalText;
+                    cacheBtn.disabled = false;
+                });
+        }
+
+        function checkDatabaseHealth() {
+            // Show loading state
+            const healthBtn = document.querySelector('button[onclick="checkDatabaseHealth()"]');
+            const originalText = healthBtn.innerHTML;
+            healthBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Checking Health...';
+            healthBtn.disabled = true;
+            
+            fetch('/api/admin/database-health')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'healthy') {
+                        showDatabaseHealthModal(data);
+                    } else {
+                        showFlashMessage(`Database health check failed: ${data.message}`, 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error checking database health:', error);
+                    showFlashMessage('Error checking database health', 'error');
+                })
+                .finally(() => {
+                    // Restore button state
+                    healthBtn.innerHTML = originalText;
+                    healthBtn.disabled = false;
+                });
+        }
+
+        function showDatabaseHealthModal(healthData) {
+            const modal = document.createElement('div');
+            modal.className = 'modal';
+            modal.style.display = 'block';
+            
+            const details = healthData.details;
+            const statusColor = healthData.status === 'healthy' ? 'success' : 'danger';
+            const statusIcon = healthData.status === 'healthy' ? 'check-circle' : 'exclamation-triangle';
+            
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3><i class="bi bi-heart-pulse"></i> Database Health Check</h3>
+                        <span class="close" onclick="this.parentElement.parentElement.parentElement.remove()">&times;</span>
+                    </div>
+                    <div class="modal-body">
+                        <div class="alert alert-${statusColor}">
+                            <i class="bi bi-${statusIcon}"></i> ${healthData.message}
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h5><i class="bi bi-info-circle"></i> System Information</h5>
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-hover">
+                                        <tbody>
+                                            <tr>
+                                                <td><strong>Status:</strong></td>
+                                                <td><span class="badge bg-${statusColor}">${healthData.status.toUpperCase()}</span></td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>Version:</strong></td>
+                                                <td>${details.version || 'N/A'}</td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>Database Size:</strong></td>
+                                                <td>${details.database_size || 'N/A'}</td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>Last Check:</strong></td>
+                                                <td>${details.last_check || new Date().toLocaleString()}</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <h5><i class="bi bi-table"></i> Table Statistics</h5>
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-hover">
+                                        <tbody>
+                                            <tr>
+                                                <td><strong>Users:</strong></td>
+                                                <td><span class="badge bg-info">${details.table_counts?.users || 0}</span></td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>Tickets:</strong></td>
+                                                <td><span class="badge bg-primary">${details.table_counts?.tickets || 0}</span></td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>Announcements:</strong></td>
+                                                <td><span class="badge bg-warning">${details.table_counts?.announcements || 0}</span></td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>History Records:</strong></td>
+                                                <td><span class="badge bg-secondary">${details.table_counts?.ticket_history || 0}</span></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                <h5><i class="bi bi-activity"></i> Activity (Last 24h)</h5>
+                                <div class="alert alert-info">
+                                    <i class="bi bi-clock"></i> <strong>Recent Activity:</strong> ${details.recent_activity_24h || 0} actions
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <h5><i class="bi bi-speedometer2"></i> Performance</h5>
+                                <div class="alert alert-info">
+                                    <i class="bi bi-cpu"></i> <strong>Active Queries:</strong> ${details.active_queries || 0}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-actions">
+                            <button type="button" onclick="this.parentElement.parentElement.parentElement.parentElement.remove()" class="btn btn-secondary">
+                                <i class="bi bi-x-circle"></i> Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        // Theme toggle functionality
+        const themeToggle = document.getElementById('themeToggle');
+        themeToggle.addEventListener('click', () => {
+            const isDark = document.body.classList.toggle('dark-theme');
+            const icon = themeToggle.querySelector('i');
+            
+            if (isDark) {
+                icon.classList.replace('bi-moon', 'bi-sun');
+                localStorage.setItem('theme', 'dark');
+            } else {
+                icon.classList.replace('bi-sun', 'bi-moon');
+                localStorage.setItem('theme', 'light');
+            }
+        });
+
+        // Flash message functions
+        function showFlashMessage(message, category) {
+            const flashContainer = document.getElementById('flash-messages');
+            const flashDiv = document.createElement('div');
+            flashDiv.className = `flash-message ${category}`;
+            flashDiv.dataset.category = category;
+            flashDiv.innerHTML = `
+                <span>${message}</span>
+                <button type="button" class="close-btn" onclick="dismissFlash(this.parentElement)">&times;</button>
+            `;
+            flashContainer.appendChild(flashDiv);
+            
+            // Auto-dismiss after 5 seconds
+            setTimeout(() => {
+                if (flashDiv.parentElement) {
+                    dismissFlash(flashDiv);
+                }
+            }, 5000);
+        }
+
+        function dismissFlash(element) {
+            element.classList.add('fade-out');
+            setTimeout(() => {
+                element.remove();
+            }, 300);
+        }
+
+        function autoDismissFlash() {
+            const flashMessages = document.querySelectorAll('.flash-message');
+            flashMessages.forEach(message => {
+                const category = message.dataset.category;
+                let timeout = 5000; // Default 5 seconds
+                
+                if (category === 'error') {
+                    timeout = 8000; // Errors stay longer
+                } else if (category === 'success') {
+                    timeout = 4000; // Success messages disappear faster
+                }
+                
+                setTimeout(() => {
+                    if (message.parentElement) {
+                        dismissFlash(message);
+                    }
+                }, timeout);
+            });
+        }
+    </script>
+</body>
+</html> 
